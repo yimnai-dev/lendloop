@@ -1,0 +1,30 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+      - run: bun install --frozen-lockfile
+      - name: Format
+        run: bun run fmt:check
+      - name: Lint
+        run: bun run lint
+      - name: Typecheck
+        run: bun run typecheck
+      - name: Generated code is up to date
+        run: bunx confect codegen && git diff --exit-code -- confect/_generated convex
+      - name: n8n workflow JSON matches its sources
+        run: bun scripts/n8n-build.ts --check
+      - name: Unit, n8n Code-node and Convex RBAC tests
+        run: bun run test

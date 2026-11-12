@@ -15,7 +15,10 @@
     "fmt:check": "oxfmt --check",
     "test": "vitest run",
     "test:watch": "vitest",
-    "check": "bun run fmt:check && bun run lint && bun run typecheck && bun run test"
+    "check": "bun run fmt:check && bun run lint && bun run typecheck && bun scripts/n8n-build.ts --check && bun run test",
+    "n8n:build": "bun scripts/n8n-build.ts",
+    "n8n:setup": "bun scripts/n8n-setup.ts",
+    "seed": "convex run seed:demo"
   },
   "dependencies": {
     "@clerk/nextjs": "^7.9.25",

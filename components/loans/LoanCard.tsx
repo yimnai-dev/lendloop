@@ -8,15 +8,8 @@ import type { LoanView } from "~/confect/views";
 import { today } from "~/lib/today";
 import { daysOverdue } from "~/shared/domain/loanView";
 import { LoanActions, type Perspective } from "./LoanActions";
+import { LoanStatusBadge } from "./LoanStatusBadge";
 import { LoanTimeline } from "./LoanTimeline";
-
-const STATUS_VARIANT = {
-  pending: "secondary",
-  approved: "default",
-  declined: "outline",
-  cancelled: "outline",
-  returned: "outline",
-} as const;
 
 export function LoanCard({
   loan,
@@ -34,7 +27,7 @@ export function LoanCard({
           <Link href={`/tools/${loan.tool._id}`} className="font-medium hover:underline">
             {loan.tool.name}
           </Link>
-          <Badge variant={STATUS_VARIANT[loan.status]}>{loan.status}</Badge>
+          <LoanStatusBadge status={loan.status} />
           {overdue > 0 && <Badge variant="destructive">{overdue} days overdue</Badge>}
           <span className="text-muted-foreground text-sm">
             {loan.startDate} → {loan.endDate}
