@@ -5,7 +5,7 @@ import type loans from "../_generated/tables/loans";
 import type tools from "../_generated/tables/tools";
 import { loadTool, loadUser } from "../policies/load";
 import type { LoanView, ToolCard } from "../views";
-import { photoUrls } from "./photos";
+import { photos } from "./photos";
 
 type ToolDoc = typeof tools.Doc.Type;
 type LoanDoc = typeof loans.Doc.Type;
@@ -37,7 +37,7 @@ export const toToolCard = Effect.fn("toToolCard")(function* (
     description: tool.description,
     owner: { firstName: owner.firstName, trustedLender: owner.trustedLender },
     isMine: tool.ownerId === viewerId,
-    photoUrls: yield* photoUrls(tool.photoIds),
+    photos: yield* photos(tool.photoIds),
     bookings: yield* approvedBookings(tool._id),
   };
   return card;
@@ -61,6 +61,8 @@ export const toLoanView = Effect.fn("toLoanView")(function* (
   const view: LoanView = {
     _id: loan._id,
     requestedAt: loan._creationTime,
+    decidedAt: loan.decidedAt ?? null,
+    returnedAt: loan.returnedAt ?? null,
     tool: { _id: tool._id, name: tool.name },
     counterpart: {
       firstName: other.firstName,

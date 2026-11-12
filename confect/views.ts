@@ -15,6 +15,9 @@ import { AutomationKind } from "./tables/automationEvents";
 export const Booking = Schema.Struct({ startDate: IsoDate, endDate: IsoDate });
 export type Booking = typeof Booking.Type;
 
+export const Photo = Schema.Struct({ storageId: Id("_storage"), url: Schema.String });
+export type Photo = typeof Photo.Type;
+
 export const ToolCard = Schema.Struct({
   _id: Id("tools"),
   name: Schema.String,
@@ -23,7 +26,7 @@ export const ToolCard = Schema.Struct({
   description: Schema.String,
   owner: PublicProfile,
   isMine: Schema.Boolean,
-  photoUrls: Schema.Array(Schema.String),
+  photos: Schema.Array(Photo),
   /** Approved, unreturned loans; the UI derives availability from these. */
   bookings: Schema.Array(Booking),
 });
@@ -57,6 +60,8 @@ export type Activity = typeof Activity.Type;
 export const LoanView = Schema.Struct({
   _id: Id("loans"),
   requestedAt: Schema.Finite,
+  decidedAt: Schema.NullOr(Schema.Finite),
+  returnedAt: Schema.NullOr(Schema.Finite),
   tool: Schema.Struct({ _id: Id("tools"), name: Schema.String }),
   /** The other party. Email only once the loan is approved, for the handover. */
   counterpart: Schema.Struct({

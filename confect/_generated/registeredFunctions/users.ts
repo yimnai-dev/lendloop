@@ -8,6 +8,7 @@ const definitions = ConvexFunctionDefinitions.buildForGroup<typeof import("../..
 
 export default {
 ["viewer"]: RegisteredConvexFunction.register({ ...definitions["viewer"], handler: forward(definitions["viewer"].handler) }),
+["provision"]: RegisteredConvexFunction.register({ ...definitions["provision"], handler: forward(definitions["provision"].handler) }),
 ["upsertFromClerk"]: RegisteredConvexFunction.register({ ...definitions["upsertFromClerk"], handler: forward(definitions["upsertFromClerk"].handler) }),
 ["anonymize"]: RegisteredConvexFunction.register({ ...definitions["anonymize"], handler: forward(definitions["anonymize"].handler) }),
 } as RegisteredFunctions.RegisteredFunctionsForGroupSpec<typeof import("../../users.spec")["default"]>;

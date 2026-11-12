@@ -68,12 +68,10 @@ const recordSuccess = FunctionImpl.make(
       const row = yield* reader.table("outboxEvents").get(outboxId);
       if (row.status !== "pending") return null;
 
-      yield* writer
-        .table("outboxEvents")
-        .patch(outboxId, {
-          status: "delivered",
-          deliveredAt: yield* Clock.currentTimeMillis,
-        });
+      yield* writer.table("outboxEvents").patch(outboxId, {
+        status: "delivered",
+        deliveredAt: yield* Clock.currentTimeMillis,
+      });
       yield* recordAutomationEvent({
         idempotencyKey: `outbox:${row.eventId}`,
         kind: "notification_delivered",

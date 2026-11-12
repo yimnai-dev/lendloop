@@ -14,7 +14,11 @@ class InvalidWebhook extends Schema.TaggedError<InvalidWebhook>()("InvalidWebhoo
   reason: Schema.String,
 }) {}
 
-const EmailAddress = Schema.Struct({ id: Schema.String, email_address: Email });
+const EmailAddress = Schema.Struct({
+  id: Schema.String,
+  email_address: Email,
+  verification: Schema.NullOr(Schema.Struct({ status: Schema.String })),
+});
 
 /** Only the Clerk fields we keep; everything else in the payload is ignored. */
 const ClerkEvent = Schema.Union([
@@ -88,6 +92,7 @@ const handler = Effect.gen(function* () {
   yield* runMutation(refs.internal.users.upsertFromClerk, {
     clerkId: id,
     email: primary.email_address,
+    emailVerified: primary.verification?.status === "verified",
     firstName: first_name ?? "Neighbor",
   });
   return HttpServerResponse.empty({ status: 204 });

@@ -47,31 +47,62 @@ const viewer = FunctionImpl.make(databaseSchema, users, "viewer", () =>
   }),
 );
 
+type ClerkUser = {
+  readonly clerkId: string;
+  readonly email: Email;
+  readonly emailVerified: boolean;
+  readonly firstName: string;
+};
+
+/** Role and trust are managed in LendLoop and never overwritten from Clerk. */
+const upsertUser = Effect.fn("upsertUser")(function* (user: ClerkUser) {
+  const writer = yield* DatabaseWriter;
+  const existing = yield* findByClerkId(user.clerkId);
+  const { clerkId, email, firstName } = user;
+
+  if (Option.isSome(existing)) {
+    if (existing.value.anonymizedAt !== undefined) return null;
+    yield* writer.table("users").patch(existing.value._id, { email, firstName });
+    return null;
+  }
+  const admins = yield* adminEmails;
+  const isAdmin = user.emailVerified && admins.has(email.toLowerCase());
+  yield* writer.table("users").insert({
+    clerkId,
+    email,
+    firstName,
+    role: isAdmin ? "admin" : "user",
+    trustedLender: false,
+  });
+  return null;
+});
+
 const upsertFromClerk = FunctionImpl.make(
   databaseSchema,
   users,
   "upsertFromClerk",
-  ({ clerkId, email, firstName }) =>
-    Effect.gen(function* () {
-      const writer = yield* DatabaseWriter;
-      const existing = yield* findByClerkId(clerkId);
+  (user) => upsertUser(user).pipe(Effect.orDie),
+);
 
-      if (Option.isSome(existing)) {
-        // Role and trust are managed in LendLoop, never overwritten by Clerk.
-        yield* writer.table("users").patch(existing.value._id, { email, firstName });
-        return null;
-      }
+const decodeEmail = Schema.decodeUnknownEffect(Email);
 
-      const admins = yield* adminEmails;
-      yield* writer.table("users").insert({
-        clerkId,
-        email,
-        firstName,
-        role: admins.has(email.toLowerCase()) ? "admin" : "user",
-        trustedLender: false,
-      });
-      return null;
-    }).pipe(Effect.orDie),
+const provision = FunctionImpl.make(databaseSchema, users, "provision", () =>
+  Effect.gen(function* () {
+    const auth = yield* Auth;
+    const identity = yield* Effect.option(auth.getUserIdentity);
+    if (Option.isNone(identity)) return null;
+    const { subject, email, emailVerified, givenName } = identity.value;
+    const existing = yield* findByClerkId(subject);
+    if (Option.isSome(existing)) return null; // The webhook owns updates.
+
+    return yield* upsertUser({
+      clerkId: subject,
+      email: yield* decodeEmail(email),
+      // Clerk templates render booleans as strings in some versions.
+      emailVerified: String(emailVerified) === "true",
+      firstName: givenName ?? "Neighbor",
+    });
+  }).pipe(Effect.orDie),
 );
 
 const scrubbedEmail = Schema.decodeSync(Email)("deleted@lendloop.invalid");
@@ -95,6 +126,7 @@ const anonymize = FunctionImpl.make(databaseSchema, users, "anonymize", ({ clerk
 
 export default GroupImpl.make(databaseSchema, users).pipe(
   Layer.provide(viewer),
+  Layer.provide(provision),
   Layer.provide(upsertFromClerk),
   Layer.provide(anonymize),
   GroupImpl.finalize,

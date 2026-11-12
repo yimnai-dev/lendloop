@@ -18,11 +18,19 @@ export type Viewer = typeof Viewer.Type;
 export const ClerkUser = {
   clerkId: Schema.String,
   email: Email,
+  /** Only verified emails can match the admin allowlist. */
+  emailVerified: Schema.Boolean,
   firstName: Schema.String,
 };
 
 export default GroupSpec.make()
   .addFunction(FunctionSpec.publicQuery({ name: "viewer", returns: () => Viewer }))
+  .addFunction(
+    // First sign-in creates the user from the verified Convex JWT, so there is
+    // no window where Clerk knows someone the backend doesn't. The webhook
+    // keeps profiles in sync afterwards and handles deletions.
+    FunctionSpec.publicMutation({ name: "provision", returns: () => Schema.Null }),
+  )
   .addFunction(
     FunctionSpec.internalMutation({
       name: "upsertFromClerk",

@@ -29,7 +29,9 @@ const body = JSON.stringify(
           id: clerkId,
           first_name: firstName ?? null,
           primary_email_address_id: "email_1",
-          email_addresses: [{ id: "email_1", email_address: email }],
+          email_addresses: [
+            { id: "email_1", email_address: email, verification: { status: "verified" } },
+          ],
         },
       },
 );

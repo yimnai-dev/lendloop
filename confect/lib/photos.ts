@@ -44,12 +44,15 @@ export const validatePhotos = Effect.fn("validatePhotos")(function* (
 });
 
 /** Signed download URLs for a tool's photos (skips any that were deleted). */
-export const photoUrls = Effect.fn("photoUrls")(function* (
+export const photos = Effect.fn("photos")(function* (
   photoIds: ReadonlyArray<Id<"_storage">>,
 ) {
   const storage = yield* StorageReader;
-  const urls = yield* Effect.forEach(photoIds, (photoId) =>
-    storage.getUrl(photoId).pipe(Effect.option),
+  const found = yield* Effect.forEach(photoIds, (storageId) =>
+    storage.getUrl(storageId).pipe(
+      Effect.map((url) => ({ storageId, url: url.toString() })),
+      Effect.option,
+    ),
   );
-  return urls.flatMap((url) => (Option.isSome(url) ? [url.value.toString()] : []));
+  return found.flatMap((photo) => (Option.isSome(photo) ? [photo.value] : []));
 });
