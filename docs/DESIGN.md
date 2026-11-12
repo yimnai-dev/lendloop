@@ -3,6 +3,7 @@
 Working record of decisions made before implementation. The README will summarize these for reviewers.
 
 ## Stack & tooling
+
 - Next.js (App Router), TypeScript (strict, `noUncheckedIndexedAccess`, `exactOptionalPropertyTypes`)
 - Clerk (auth) · Convex (cloud dev deployment) · n8n (self-hosted, Docker)
 - **Effect 4 + Confect v10** wherever it fits: DB schema, function args/returns, HTTP API, services/layers, retries
@@ -12,9 +13,11 @@ Working record of decisions made before implementation. The README will summariz
 - Single app layout: `app/`, `convex/`, `shared/` (domain schemas imported by both), `n8n/workflows/`, `docker-compose.yml`
 
 ## Code rules
+
 No `any`, no needless casts, generics where they help, small files, no `useEffect`: derive state instead of syncing it.
 
 ## Domain
+
 - **Categories** (literal union): power_tools, hand_tools, garden, kitchen, camping, cleaning, outdoor, other
 - **Condition** (literal union): new, good, fair, worn
 - **Tool**: name, category, condition, description, optional photo (Convex storage, type and size validated on the server), ownerId, archivedAt?
@@ -25,6 +28,7 @@ No `any`, no needless casts, generics where they help, small files, no `useEffec
 - **Delete tool**: blocked while a loan is out. Otherwise the tool is soft-archived, and its pending requests are auto-cancelled with notifications sent. Editing is always allowed.
 
 ## Identity, roles, privacy
+
 - The Convex `users` table is the source of truth for `role` (`admin` | `user`). Emails in `ADMIN_EMAILS` become admin when they're first provisioned.
 - Users are synced by a Clerk webhook (svix-verified) to a Convex HTTP action. On `user.deleted`, the user is anonymized. Until the user doc exists, the UI shows "setting up your account" (derived from the query).
 - RBAC is enforced in every Convex function through Effect services and helpers (`CurrentUser`, `requireAdmin`, `requireToolOwner`, `requireLoanParty`).
@@ -34,6 +38,7 @@ No `any`, no needless casts, generics where they help, small files, no `useEffec
 - Rate limiting via `@convex-dev/rate-limiter` on borrow requests and listing creation.
 
 ## Automation (n8n)
+
 - **Email**: Resend in production. n8n's HTTP Request node calls the Resend REST API with the base URL from env and the key in an n8n credential. Locally, **resendev** (`jupitercl/resendev`) runs in docker-compose.
 - **Convex → n8n**: transactional **outbox**. The mutation writes an `outboxEvents` row in the same transaction, then schedules an Effect dispatcher that retries with exponential backoff and jitter (`Schedule`) and marks rows `delivered` or `dead`.
 - **Reaching local n8n** from cloud Convex: a tunnel (cloudflared or ngrok).
@@ -45,9 +50,11 @@ No `any`, no needless casts, generics where they help, small files, no `useEffec
 - **Bonus**: an activity timeline per loan from `automationEvents` ("Reminder sent 2 days ago").
 
 ## UX / routes
+
 `/` (public) · `/tools?category=` · `/tools/[id]` · `/me/listings` · `/me/requests` · `/me/incoming` · `/admin/{listings,loans,users,automation}`
 
 ## Quality
+
 - Unit tests: RBAC rules, state transitions, HMAC (tampered, stale, wrong secret), idempotent write-backs (`@confect/test` / convex-test)
 - Playwright E2E happy path (Clerk test mode)
 - GitHub Actions: typecheck, oxlint, oxfmt --check, tests

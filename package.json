@@ -1,0 +1,67 @@
+{
+  "name": "lendloop",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "concurrently -k -n next,convex,confect -c cyan,yellow,magenta \"next dev\" \"convex dev --tail-logs\" \"confect dev\"",
+    "dev:next": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "codegen": "confect codegen",
+    "typecheck": "next typegen && tsc --noEmit && tsc --noEmit -p convex/tsconfig.json",
+    "lint": "oxlint --type-aware",
+    "lint:fix": "oxlint --type-aware --fix",
+    "fmt": "oxfmt",
+    "fmt:check": "oxfmt --check",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "check": "bun run fmt:check && bun run lint && bun run typecheck && bun run test"
+  },
+  "dependencies": {
+    "@clerk/nextjs": "^7.9.25",
+    "@confect/core": "^10.6.0",
+    "@confect/react": "^10.6.0",
+    "@confect/server": "^10.6.0",
+    "@convex-dev/rate-limiter": "^0.4.3",
+    "@tanstack/react-form": "^1.33.5",
+    "convex": "1.49.0",
+    "effect": "4.1.4",
+    "next": "16.4.6",
+    "nuqs": "^2.10.3",
+    "react": "19.3.0",
+    "react-dom": "19.3.0",
+    "svix": "^2.10.0",
+    "temporal-polyfill": "^1.0.8"
+  },
+  "devDependencies": {
+    "@confect/cli": "^10.6.0",
+    "@confect/test": "^10.6.0",
+    "@effect/platform-node": "4.1.4",
+    "@tailwindcss/turbopack": "4.3.3",
+    "@types/node": "24",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "concurrently": "^10.0.7",
+    "convex-test": "^0.0.70",
+    "oxfmt": "^0.78.0",
+    "oxlint": "^1.93.0",
+    "oxlint-tsgolint": "^7.0.2006",
+    "tailwindcss": "4.3.3",
+    "typescript": "^5",
+    "vitest": "^5.1.0"
+  },
+  "packageManager": "bun@1.4.3",
+  "ignoreScripts": [
+    "sharp",
+    "unrs-resolver"
+  ],
+  "trustedDependencies": [
+    "esbuild",
+    "sharp",
+    "unrs-resolver"
+  ],
+  "engines": {
+    "node": ">=24"
+  },
+  "type": "module"
+}

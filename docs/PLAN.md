@@ -1,6 +1,6 @@
 # LendLoop — Implementation plan
 
-Companion to [DESIGN.md](./DESIGN.md), which records *what* we decided. This file is *how and in what order* we build it.
+Companion to [DESIGN.md](./DESIGN.md), which records _what_ we decided. This file is _how and in what order_ we build it.
 
 Guiding principle: **the required scope ships first, end to end; extras come last and can be cut.** Each phase ends in a working, committed state with its own verification step.
 
@@ -53,6 +53,7 @@ lendloop/
 ```
 
 Effect boundaries:
+
 - **Pure domain** (`shared/domain`) returns `Either` or tagged errors and has no services, so it's trivially testable.
 - **Confect functions** are `Effect.gen` handlers using `CurrentUser`, the DB services and policies. Typed errors (`NotSignedIn`, `Forbidden`, `NotFound`, `InvalidTransition`, `DateConflict`, `RateLimited`) flow to the client as `_tag` unions.
 - **Integration** consists of `N8nClient` (Layer) with `Schedule.exponential` + jitter, `Signature` as Effects over Web Crypto, and `AppConfig` via Effect `Config` (secrets as `Redacted`).
@@ -63,6 +64,7 @@ Effect boundaries:
 ## Phase 0 — De-risk spike (do first, throw away anything ugly)
 
 Prove the riskiest assumptions before building on them:
+
 1. Next.js + bun + Confect v10 (Effect 4) + Convex cloud dev + Clerk wired together, with a "whoami" query returning the Clerk identity.
 2. A Confect HTTP endpoint can read the **raw body + headers** (needed for HMAC). Fallback: a native `http.route` with `httpActionGeneric`, delegating to Effect.
 3. `crypto.subtle` HMAC works in the Convex default runtime, so we don't need a Node action.
@@ -143,6 +145,7 @@ Prove the riskiest assumptions before building on them:
 ## Phase 7 — n8n → Convex HTTP API
 
 The `HttpApi` group `automation` sits behind an **HMAC middleware**. It verifies the timestamp tolerance, recomputes the signature over the raw request, compares in constant time, and returns 401 with no detail on failure.
+
 - `GET /automation/overdue-loans`: Convex computes `today` in `APP_TZ` and returns loans that are approved, past their end date and have no `reminder:{loanId}:{today}` event. Minimal payload: `{ loanId, reminderKey, borrower: { email, firstName }, tool: { name }, endDate, daysOverdue }`.
 - `POST /automation/reminders`: `{ reminderKey, loanId, status: sent | failed, providerMessageId? }`, upserted by `idempotencyKey`. A replay returns 200 with `{ duplicate: true }`.
 - `POST /automation/errors`: `{ workflow, executionId, node, message }`, upserted by `executionId`.
@@ -194,18 +197,21 @@ Idempotency is layered: the outbox `eventId`, then the Resend `Idempotency-Key`,
 ---
 
 ## Order of commits (roughly)
+
 `chore: scaffold` → `feat(domain)` → `feat(auth): users + clerk webhook + rbac` → `feat(tools)` → `feat(loans)` → `feat(ui): …` (several) → `feat(outbox)` → `feat(http): automation api` → `feat(n8n): workflows + compose` → `feat(admin)` → `feat: timeline + seed` → `test/ci` → `docs`
 
 ## Risks & mitigations
-| Risk | Mitigation |
-|---|---|
-| Confect v10 / Effect 4 is new; docs and LLM knowledge are thin | Phase 0 spike. Fall back to plain Convex functions for specific pieces (Confect supports mixing). |
-| Raw body is unavailable in Confect HttpApi | Native `http.route` for the HMAC-protected routes, still Effect inside. |
-| Tunnel URL changes per run (quick tunnels) | Store `N8N_NOTIFY_WEBHOOK_URL` in Convex env and document the one command to update it. Named tunnel optional. |
-| The Clerk webhook only reaches Convex once configured | README step. The UI gate shows "setting up your account". |
-| Scope creep | Required scope done at the end of phase 8. Phases 10–11 are cuttable. |
+
+| Risk                                                           | Mitigation                                                                                                     |
+| -------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------- |
+| Confect v10 / Effect 4 is new; docs and LLM knowledge are thin | Phase 0 spike. Fall back to plain Convex functions for specific pieces (Confect supports mixing).              |
+| Raw body is unavailable in Confect HttpApi                     | Native `http.route` for the HMAC-protected routes, still Effect inside.                                        |
+| Tunnel URL changes per run (quick tunnels)                     | Store `N8N_NOTIFY_WEBHOOK_URL` in Convex env and document the one command to update it. Named tunnel optional. |
+| The Clerk webhook only reaches Convex once configured          | README step. The UI gate shows "setting up your account".                                                      |
+| Scope creep                                                    | Required scope done at the end of phase 8. Phases 10–11 are cuttable.                                          |
 
 ## What I'll need from you, and when
+
 - **Phase 0:** `bunx convex dev` login (interactive), the Clerk app keys (via secure prompt), cloudflared installed.
 - **Phase 3:** add the Clerk webhook endpoint in the dashboard (I'll give you the URL) and paste the signing secret.
 - **Phase 8:** first-time n8n owner account setup in the browser.
