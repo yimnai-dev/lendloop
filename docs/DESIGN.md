@@ -1,6 +1,6 @@
 # LendLoop — Design decisions
 
-Working record of decisions made before implementation. The README will summarize these for reviewers.
+Working record of decisions, kept as they were made (some early bullets were refined later, see "Decisions made during build"). The README summarizes the result.
 
 ## Stack & tooling
 
@@ -73,3 +73,6 @@ No `any`, no needless casts, generics where they help, small files, no `useEffec
 - **Transient auth errors render as loading**: `NotSignedIn` and `AccountNotProvisioned` occur briefly while the Convex token or first-visit provisioning settles. `QueryView` shows a skeleton for them instead of an error.
 - **Public list groups duplicates** ("Ladder ×2"). Public rows carry no ids, so grouping by name and category also gives stable keys.
 - **Clerk for local dev** uses accountless keys (`clerk init --accountless`). The `convex` JWT template is created through the Backend API; see the README.
+- **Routes as built**: `/listings`, `/requests`, `/incoming` (no `/me` prefix), and `/admin?tab=loans|users|listings|automation` as one page with URL-driven tabs.
+- **n8n workflows are generated** from `scripts/n8n/workflows.ts` + `n8n/code/*.js`, and CI checks the JSON for drift. Signature checks run in Code nodes (`node:crypto`), not the Crypto node, because the MAC covers the raw body and the Code node can read it exactly.
+- **Outbox redrive**: dead notifications can be re-queued (`outbox:redrive` internally, or **Retry failed** in /admin). The eventId is the email Idempotency-Key.
