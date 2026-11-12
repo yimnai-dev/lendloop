@@ -28,3 +28,10 @@ jobs:
         run: bun scripts/n8n-build.ts --check
       - name: Unit, n8n Code-node and Convex RBAC tests
         run: bun run test
+      - name: Production build (placeholder public config)
+        run: bun run build
+        env:
+          NEXT_PUBLIC_CONVEX_URL: https://example.convex.cloud
+          # Not a secret: "example.clerk.accounts.dev$" base64-encoded, the shape Clerk expects.
+          NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: pk_test_ZXhhbXBsZS5jbGVyay5hY2NvdW50cy5kZXYk
+          CLERK_SECRET_KEY: sk_test_placeholder
