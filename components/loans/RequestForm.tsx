@@ -91,8 +91,8 @@ export function RequestForm({ toolId }: { readonly toolId: Id<"tools"> }) {
               Up to {MAX_LOAN_DAYS} days, starting within the next {MAX_ADVANCE_DAYS}{" "}
               days.
             </p>
-            <Button type="submit" disabled={isSubmitting} className="justify-self-start">
-              Request to borrow
+            <Button type="submit" size="lg" disabled={isSubmitting} className="w-full">
+              {isSubmitting ? "Sending…" : "Request to borrow"}
             </Button>
           </>
         )}

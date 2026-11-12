@@ -62,7 +62,7 @@ export const LoanView = Schema.Struct({
   requestedAt: Schema.Finite,
   decidedAt: Schema.NullOr(Schema.Finite),
   returnedAt: Schema.NullOr(Schema.Finite),
-  tool: Schema.Struct({ _id: Id("tools"), name: Schema.String }),
+  tool: Schema.Struct({ _id: Id("tools"), name: Schema.String, category: Category }),
   /** The other party. Email only once the loan is approved, for the handover. */
   counterpart: Schema.Struct({
     firstName: Schema.String,

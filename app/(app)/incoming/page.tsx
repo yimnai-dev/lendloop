@@ -1,9 +1,15 @@
+import { PageHeader } from "~/components/app/PageHeader";
 import { LoanList } from "~/components/loans/LoanList";
+
+export const metadata = { title: "Incoming requests" };
 
 export default function IncomingPage() {
   return (
-    <section className="grid gap-6">
-      <h1 className="text-2xl font-semibold">Incoming requests</h1>
+    <section className="grid gap-8">
+      <PageHeader
+        title="Incoming requests"
+        description="Neighbors asking to borrow your tools. Approving declines any overlapping requests."
+      />
       <LoanList as="lender" />
     </section>
   );

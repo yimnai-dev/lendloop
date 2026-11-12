@@ -50,7 +50,7 @@ export function ToolForm({ initial, submitLabel, onSubmit }: Props) {
 
   return (
     <form
-      className="grid max-w-xl gap-5"
+      className="bg-card grid gap-6 rounded-2xl border p-6 shadow-xs"
       onSubmit={(event) => {
         event.preventDefault();
         void form.handleSubmit();
@@ -62,6 +62,7 @@ export function ToolForm({ initial, submitLabel, onSubmit }: Props) {
             <Label htmlFor="name">Name</Label>
             <Input
               id="name"
+              placeholder="Cordless drill"
               value={field.state.value}
               onChange={(e) => field.handleChange(e.target.value)}
               onBlur={field.handleBlur}
@@ -82,7 +83,7 @@ export function ToolForm({ initial, submitLabel, onSubmit }: Props) {
                   if (category !== undefined) field.handleChange(category);
                 }}
               >
-                <SelectTrigger aria-label="Category">
+                <SelectTrigger className="w-full" aria-label="Category">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -107,7 +108,7 @@ export function ToolForm({ initial, submitLabel, onSubmit }: Props) {
                   if (condition !== undefined) field.handleChange(condition);
                 }}
               >
-                <SelectTrigger aria-label="Condition">
+                <SelectTrigger className="w-full" aria-label="Condition">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -129,6 +130,7 @@ export function ToolForm({ initial, submitLabel, onSubmit }: Props) {
             <Textarea
               id="description"
               rows={4}
+              placeholder="Anything a borrower should know: battery count, bits included, quirks."
               value={field.state.value}
               onChange={(e) => field.handleChange(e.target.value)}
               onBlur={field.handleBlur}
@@ -144,8 +146,13 @@ export function ToolForm({ initial, submitLabel, onSubmit }: Props) {
       </form.Field>
       <form.Subscribe selector={(state) => state.isSubmitting}>
         {(isSubmitting) => (
-          <Button type="submit" disabled={isSubmitting} className="justify-self-start">
-            {submitLabel}
+          <Button
+            type="submit"
+            size="lg"
+            disabled={isSubmitting}
+            className="justify-self-start"
+          >
+            {isSubmitting ? "Saving…" : submitLabel}
           </Button>
         )}
       </form.Subscribe>

@@ -5,7 +5,6 @@ import { QueryView } from "~/components/app/QueryView";
 import { AUTOMATION_LABELS } from "~/components/loans/timeline";
 import { Badge } from "~/components/ui/badge";
 import { Button } from "~/components/ui/button";
-import { Card, CardContent } from "~/components/ui/card";
 import {
   Table,
   TableBody,
@@ -16,11 +15,40 @@ import {
 } from "~/components/ui/table";
 import refs from "~/confect/_generated/refs";
 import { toastResult } from "~/lib/mutationResult";
+import { formatTimestamp } from "~/lib/dates";
+import { cn } from "~/lib/utils";
+import { Panel } from "./Panel";
 
-const timeFormat = new Intl.DateTimeFormat(undefined, {
-  dateStyle: "medium",
-  timeStyle: "short",
-});
+function Stat({
+  label,
+  value,
+  bad = false,
+}: {
+  readonly label: string;
+  readonly value: number;
+  readonly bad?: boolean;
+}) {
+  return (
+    <div
+      className={cn(
+        "bg-card grid gap-1 rounded-2xl border p-4",
+        bad && "border-destructive/40 bg-destructive/5",
+      )}
+    >
+      <span className="text-muted-foreground text-xs font-medium tracking-wider uppercase">
+        {label}
+      </span>
+      <span
+        className={cn(
+          "font-heading text-3xl font-semibold tabular-nums",
+          bad && "text-destructive",
+        )}
+      >
+        {value}
+      </span>
+    </div>
+  );
+}
 const FAILED = new Set(["notification_dead", "reminder_failed", "workflow_error"]);
 
 export function AdminAutomation() {
@@ -30,58 +58,65 @@ export function AdminAutomation() {
     <QueryView result={health}>
       {({ outbox, recent }) => (
         <div className="grid gap-4">
-          <Card>
-            <CardContent className="flex flex-wrap items-center gap-4">
-              <span className="font-medium">Notification outbox</span>
-              <Badge variant="secondary">{outbox.pending} pending</Badge>
-              <Badge variant="outline">{outbox.delivered} delivered</Badge>
-              <Badge variant={outbox.dead > 0 ? "destructive" : "outline"}>
-                {outbox.dead} failed
-              </Badge>
-              {outbox.dead > 0 && (
-                <Button
-                  size="sm"
-                  className="ml-auto"
-                  onClick={() => {
-                    void toastResult(redrive({}), "Failed notifications re-queued");
-                  }}
-                >
-                  Retry failed
-                </Button>
-              )}
-            </CardContent>
-          </Card>
+          <div className="flex flex-wrap items-end justify-between gap-3">
+            <div className="grid gap-1">
+              <h2 className="text-lg font-semibold">Notification outbox</h2>
+              <p className="text-muted-foreground text-sm">
+                Convex → n8n deliveries, retried with backoff.
+              </p>
+            </div>
+            {outbox.dead > 0 && (
+              <Button
+                size="sm"
+                onClick={() => {
+                  void toastResult(redrive({}), "Failed notifications re-queued");
+                }}
+              >
+                Retry failed
+              </Button>
+            )}
+          </div>
+          <div className="grid gap-3 sm:grid-cols-3">
+            <Stat label="Pending" value={outbox.pending} />
+            <Stat label="Delivered" value={outbox.delivered} />
+            <Stat label="Failed" value={outbox.dead} bad={outbox.dead > 0} />
+          </div>
+          <h2 className="mt-4 text-lg font-semibold">Recent activity</h2>
           {recent.length === 0 ? (
             <p className="text-muted-foreground">No automation activity yet.</p>
           ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>When</TableHead>
-                  <TableHead>Event</TableHead>
-                  <TableHead>Tool</TableHead>
-                  <TableHead>Detail</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {recent.map((event) => (
-                  <TableRow key={event._id}>
-                    <TableCell className="whitespace-nowrap">
-                      {timeFormat.format(event.at)}
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant={FAILED.has(event.kind) ? "destructive" : "outline"}>
-                        {AUTOMATION_LABELS[event.kind]}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>{event.toolName ?? "—"}</TableCell>
-                    <TableCell className="text-muted-foreground max-w-md truncate text-sm">
-                      {event.detail ?? ""}
-                    </TableCell>
+            <Panel>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>When</TableHead>
+                    <TableHead>Event</TableHead>
+                    <TableHead>Tool</TableHead>
+                    <TableHead>Detail</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                </TableHeader>
+                <TableBody>
+                  {recent.map((event) => (
+                    <TableRow key={event._id}>
+                      <TableCell className="whitespace-nowrap">
+                        {formatTimestamp(event.at)}
+                      </TableCell>
+                      <TableCell>
+                        <Badge
+                          variant={FAILED.has(event.kind) ? "destructive" : "success"}
+                        >
+                          {AUTOMATION_LABELS[event.kind]}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>{event.toolName ?? "—"}</TableCell>
+                      <TableCell className="text-muted-foreground max-w-md truncate text-sm">
+                        {event.detail ?? ""}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </Panel>
           )}
         </div>
       )}

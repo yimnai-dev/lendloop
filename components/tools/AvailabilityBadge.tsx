@@ -1,9 +1,10 @@
 "use client";
 
 import { Badge } from "~/components/ui/badge";
+import type { Booking } from "~/confect/views";
+import { formatDate } from "~/lib/dates";
 import { today } from "~/lib/today";
 import { availability } from "~/shared/domain/loanView";
-import type { Booking } from "~/confect/views";
 
 /** Derived on render from approved bookings; nothing about it is stored. */
 export function AvailabilityBadge({
@@ -17,10 +18,10 @@ export function AvailabilityBadge({
   );
   switch (state._tag) {
     case "Available":
-      return <Badge variant="secondary">Available</Badge>;
+      return <Badge variant="success">Available</Badge>;
     case "OnLoan":
-      return <Badge variant="outline">On loan until {state.until}</Badge>;
+      return <Badge variant="warning">Back {formatDate(state.until)}</Badge>;
     case "Overdue":
-      return <Badge variant="destructive">Overdue since {state.since}</Badge>;
+      return <Badge variant="destructive">Overdue</Badge>;
   }
 }

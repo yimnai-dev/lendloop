@@ -8,7 +8,9 @@ export default function AppLayout({ children }: LayoutProps<"/">) {
     <>
       <AccountSync />
       <AppNav />
-      <main className="mx-auto w-full max-w-5xl flex-1 px-6 py-8">{children}</main>
+      <main className="mx-auto w-full min-w-0 max-w-6xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
+        {children}
+      </main>
       <Toaster richColors />
     </>
   );

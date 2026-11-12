@@ -25,7 +25,7 @@ export function AdminConsole() {
         void setParams({ tab: ADMIN_TABS.find((t) => t === value) ?? null });
       }}
     >
-      <TabsList>
+      <TabsList className="max-w-full overflow-x-auto">
         {ADMIN_TABS.map((t) => (
           <TabsTrigger key={t} value={t}>
             {LABEL[t]}

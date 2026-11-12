@@ -21,10 +21,12 @@ import {
   TableRow,
 } from "~/components/ui/table";
 import refs from "~/confect/_generated/refs";
+import { formatRange } from "~/lib/dates";
 import { adminParams } from "~/lib/searchParams";
 import { today } from "~/lib/today";
 import { LOAN_STATUSES, loanStatusLabel } from "~/shared/domain/LoanStatus";
 import { daysOverdue } from "~/shared/domain/loanView";
+import { Panel } from "./Panel";
 
 const ALL = "all";
 
@@ -56,43 +58,47 @@ export function AdminLoans() {
           items.length === 0 ? (
             <p className="text-muted-foreground">No loans match.</p>
           ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Tool</TableHead>
-                  <TableHead>Lender</TableHead>
-                  <TableHead>Borrower</TableHead>
-                  <TableHead>Dates</TableHead>
-                  <TableHead>Status</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {items.map((loan) => {
-                  const overdue = daysOverdue(loan, today());
-                  return (
-                    <TableRow key={loan._id}>
-                      <TableCell>
-                        {loan.tool.name}
-                        {loan.tool.archived && (
-                          <span className="text-muted-foreground"> (removed)</span>
-                        )}
-                      </TableCell>
-                      <TableCell>{loan.lender.firstName}</TableCell>
-                      <TableCell>{loan.borrower.firstName}</TableCell>
-                      <TableCell className="tabular-nums">
-                        {loan.startDate} → {loan.endDate}
-                      </TableCell>
-                      <TableCell className="flex gap-2">
-                        <LoanStatusBadge status={loan.status} />
-                        {overdue > 0 && (
-                          <Badge variant="destructive">{overdue}d overdue</Badge>
-                        )}
-                      </TableCell>
-                    </TableRow>
-                  );
-                })}
-              </TableBody>
-            </Table>
+            <Panel>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Tool</TableHead>
+                    <TableHead>Lender</TableHead>
+                    <TableHead>Borrower</TableHead>
+                    <TableHead>Dates</TableHead>
+                    <TableHead>Status</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {items.map((loan) => {
+                    const overdue = daysOverdue(loan, today());
+                    return (
+                      <TableRow key={loan._id}>
+                        <TableCell className="font-medium">
+                          {loan.tool.name}
+                          {loan.tool.archived && (
+                            <span className="text-muted-foreground"> (removed)</span>
+                          )}
+                        </TableCell>
+                        <TableCell>{loan.lender.firstName}</TableCell>
+                        <TableCell>{loan.borrower.firstName}</TableCell>
+                        <TableCell className="whitespace-nowrap tabular-nums">
+                          {formatRange(loan.startDate, loan.endDate)}
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex gap-2">
+                            <LoanStatusBadge status={loan.status} />
+                            {overdue > 0 && (
+                              <Badge variant="destructive">{overdue}d overdue</Badge>
+                            )}
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                </TableBody>
+              </Table>
+            </Panel>
           )
         }
       </QueryView>

@@ -1,9 +1,15 @@
+import { PageHeader } from "~/components/app/PageHeader";
 import { LoanList } from "~/components/loans/LoanList";
+
+export const metadata = { title: "My requests" };
 
 export default function RequestsPage() {
   return (
-    <section className="grid gap-6">
-      <h1 className="text-2xl font-semibold">My requests</h1>
+    <section className="grid gap-8">
+      <PageHeader
+        title="My requests"
+        description="Things you've asked to borrow. The owner's email appears once they approve."
+      />
       <LoanList as="borrower" />
     </section>
   );

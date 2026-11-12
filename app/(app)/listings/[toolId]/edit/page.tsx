@@ -1,7 +1,10 @@
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
+import { PageHeader } from "~/components/app/PageHeader";
 import { EditListing } from "~/components/listings/EditListing";
 import { toolIdFrom } from "~/lib/ids";
+
+export const metadata = { title: "Edit listing" };
 
 async function Edit({ params }: Pick<PageProps<"/listings/[toolId]/edit">, "params">) {
   const toolId = toolIdFrom((await params).toolId);
@@ -11,8 +14,8 @@ async function Edit({ params }: Pick<PageProps<"/listings/[toolId]/edit">, "para
 
 export default function EditListingPage(props: PageProps<"/listings/[toolId]/edit">) {
   return (
-    <section className="grid gap-6">
-      <h1 className="text-2xl font-semibold">Edit listing</h1>
+    <section className="mx-auto grid w-full max-w-2xl gap-8">
+      <PageHeader title="Edit listing" />
       <Suspense>
         <Edit params={props.params} />
       </Suspense>

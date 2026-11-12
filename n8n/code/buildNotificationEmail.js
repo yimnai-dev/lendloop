@@ -2,7 +2,9 @@
 // Env: EMAIL_FROM, APP_URL.
 const { payload } = $input.first().json;
 const { recipient, tool, loan, type, eventId } = payload;
-const dates = `${loan.startDate} → ${loan.endDate}`;
+// ISO calendar dates → "Nov 13 – 15" (UTC, since the dates carry no zone).
+const short = new Intl.DateTimeFormat("en", { month: "short", day: "numeric", timeZone: "UTC" });
+const dates = short.formatRange(new Date(`${loan.startDate}T00:00:00Z`), new Date(`${loan.endDate}T00:00:00Z`));
 
 const COPY = {
   request_created: [`New request for your ${tool.name}`, `A neighbor asked to borrow your ${tool.name} for ${dates}.`],

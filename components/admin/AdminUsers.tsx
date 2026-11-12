@@ -15,6 +15,8 @@ import {
 import refs from "~/confect/_generated/refs";
 import type { AdminUser } from "~/confect/adminViews";
 import { toastResult } from "~/lib/mutationResult";
+import { Avatar } from "~/components/app/Avatar";
+import { Panel } from "./Panel";
 
 const dateFormat = new Intl.DateTimeFormat(undefined, { dateStyle: "medium" });
 
@@ -29,46 +31,51 @@ export function AdminUsers() {
   return (
     <QueryView result={users}>
       {(items) => (
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Name</TableHead>
-              <TableHead>Email</TableHead>
-              <TableHead>Listings</TableHead>
-              <TableHead>Trusted Lender</TableHead>
-              <TableHead>Last change</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {items.map((user) => (
-              <TableRow key={user._id}>
-                <TableCell className="flex items-center gap-2">
-                  {user.firstName}
-                  {user.role === "admin" && <Badge variant="secondary">admin</Badge>}
-                </TableCell>
-                <TableCell>{user.email}</TableCell>
-                <TableCell className="tabular-nums">{user.activeListings}</TableCell>
-                <TableCell>
-                  <Switch
-                    checked={user.trustedLender}
-                    aria-label={`Trusted Lender: ${user.firstName}`}
-                    onCheckedChange={(trusted) => {
-                      void toastResult(
-                        setTrusted({ userId: user._id, trusted }),
-                        trusted
-                          ? `${user.firstName} is now a Trusted Lender`
-                          : `Removed Trusted Lender from ${user.firstName}`,
-                      );
-                    }}
-                  />
-                </TableCell>
-                <TableCell className="text-muted-foreground text-sm">
-                  {lastChange(user)}
-                </TableCell>
+        <Panel>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Name</TableHead>
+                <TableHead>Email</TableHead>
+                <TableHead>Listings</TableHead>
+                <TableHead>Trusted Lender</TableHead>
+                <TableHead>Last change</TableHead>
               </TableRow>
-            ))}
-          </TableBody>
-        </Table>
+            </TableHeader>
+            <TableBody>
+              {items.map((user) => (
+                <TableRow key={user._id}>
+                  <TableCell>
+                    <div className="flex items-center gap-2 font-medium">
+                      <Avatar name={user.firstName} className="size-7 text-xs" />
+                      {user.firstName}
+                      {user.role === "admin" && <Badge variant="info">admin</Badge>}
+                    </div>
+                  </TableCell>
+                  <TableCell className="text-muted-foreground">{user.email}</TableCell>
+                  <TableCell className="tabular-nums">{user.activeListings}</TableCell>
+                  <TableCell>
+                    <Switch
+                      checked={user.trustedLender}
+                      aria-label={`Trusted Lender: ${user.firstName}`}
+                      onCheckedChange={(trusted) => {
+                        void toastResult(
+                          setTrusted({ userId: user._id, trusted }),
+                          trusted
+                            ? `${user.firstName} is now a Trusted Lender`
+                            : `Removed Trusted Lender from ${user.firstName}`,
+                        );
+                      }}
+                    />
+                  </TableCell>
+                  <TableCell className="text-muted-foreground text-sm">
+                    {lastChange(user)}
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </Panel>
       )}
     </QueryView>
   );

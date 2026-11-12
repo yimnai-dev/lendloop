@@ -63,7 +63,7 @@ export const toLoanView = Effect.fn("toLoanView")(function* (
     requestedAt: loan._creationTime,
     decidedAt: loan.decidedAt ?? null,
     returnedAt: loan.returnedAt ?? null,
-    tool: { _id: tool._id, name: tool.name },
+    tool: { _id: tool._id, name: tool.name, category: tool.category },
     counterpart: {
       firstName: other.firstName,
       trustedLender: other.trustedLender,

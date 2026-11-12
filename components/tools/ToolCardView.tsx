@@ -1,43 +1,41 @@
 "use client";
 
 import Link from "next/link";
-import { Badge } from "~/components/ui/badge";
-import { Card, CardContent, CardHeader, CardTitle } from "~/components/ui/card";
+import { Avatar } from "~/components/app/Avatar";
 import type { ToolCard } from "~/confect/views";
 import { categoryLabel } from "~/shared/domain/Category";
 import { conditionLabel } from "~/shared/domain/Condition";
 import { AvailabilityBadge } from "./AvailabilityBadge";
+import { ToolPhoto } from "./ToolPhoto";
 import { TrustedBadge } from "./TrustedBadge";
 
 export function ToolCardView({ tool }: { readonly tool: ToolCard }) {
-  const [cover] = tool.photos;
   return (
-    <Link href={`/tools/${tool._id}`} className="group">
-      <Card className="h-full overflow-hidden pt-0 transition-shadow group-hover:shadow-md">
-        <div className="bg-muted aspect-[4/3]">
-          {cover !== undefined && (
-            // Convex storage URLs are signed and short-lived; skip next/image.
-            // oxlint-disable-next-line nextjs/no-img-element
-            <img src={cover.url} alt="" className="size-full object-cover" />
-          )}
+    <Link
+      href={`/tools/${tool._id}`}
+      className="group bg-card focus-visible:ring-ring/50 flex flex-col overflow-hidden rounded-2xl border transition-all outline-none hover:-translate-y-0.5 hover:shadow-lg focus-visible:ring-3"
+    >
+      <div className="relative">
+        <ToolPhoto
+          photo={tool.photos[0]}
+          category={tool.category}
+          className="aspect-[4/3] w-full transition-transform duration-300 group-hover:scale-[1.02]"
+        />
+        <div className="absolute top-3 right-3">
+          <AvailabilityBadge bookings={tool.bookings} />
         </div>
-        <CardHeader>
-          <CardTitle className="flex items-start justify-between gap-2">
-            {tool.name}
-            <AvailabilityBadge bookings={tool.bookings} />
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="text-muted-foreground grid gap-2 text-sm">
-          <div className="flex flex-wrap gap-1.5">
-            <Badge variant="outline">{categoryLabel[tool.category]}</Badge>
-            <Badge variant="outline">{conditionLabel[tool.condition]}</Badge>
-          </div>
-          <span className="flex items-center gap-2">
-            {tool.isMine ? "Your listing" : `Lent by ${tool.owner.firstName}`}
-            {tool.owner.trustedLender && <TrustedBadge />}
-          </span>
-        </CardContent>
-      </Card>
+      </div>
+      <div className="grid gap-1 p-4">
+        <h2 className="truncate text-base font-semibold">{tool.name}</h2>
+        <p className="text-muted-foreground text-sm">
+          {categoryLabel[tool.category]} · {conditionLabel[tool.condition]}
+        </p>
+        <p className="text-muted-foreground mt-2 flex items-center gap-2 text-sm">
+          <Avatar name={tool.owner.firstName} className="size-6 text-xs" />
+          {tool.isMine ? "Your listing" : tool.owner.firstName}
+          {tool.owner.trustedLender && <TrustedBadge />}
+        </p>
+      </div>
     </Link>
   );
 }
