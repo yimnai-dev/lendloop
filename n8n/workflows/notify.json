@@ -1,0 +1,257 @@
+{
+  "id": "LendLoopNotify01",
+  "name": "LendLoop · Loan notifications",
+  "active": false,
+  "nodes": [
+    {
+      "id": "notify-webhook",
+      "name": "Loan event",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        0,
+        0
+      ],
+      "webhookId": "9d7f3c1e-2b8a-4c55-9e0f-1a2b3c4d5e6f",
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "lendloop-notify",
+        "responseMode": "responseNode",
+        "options": {
+          "rawBody": true
+        }
+      }
+    },
+    {
+      "id": "notify-verify",
+      "name": "Verify signature",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        220,
+        0
+      ],
+      "parameters": {
+        "jsCode": "// Verifies Convex's HMAC over the raw body before anything is parsed.\n// Env: CONVEX_TO_N8N_SECRET. Header: x-lendloop-signature: t=<unix>,v1=<hex>.\nconst crypto = require(\"crypto\");\n\nconst PATH = \"/webhook/lendloop-notify\";\nconst TOLERANCE_SECONDS = 300;\n\nconst item = $input.first();\nconst raw = (await this.helpers.getBinaryDataBuffer(0, \"data\")).toString(\"utf8\");\nconst header = String(item.json.headers[\"x-lendloop-signature\"] ?? \"\").trim();\nconst match = /^t=(\\d{1,12}),v1=([0-9a-f]{64})$/.exec(header);\nconst now = Math.floor(Date.now() / 1000);\n\nlet valid = false;\nif (match !== null && Math.abs(now - Number(match[1])) <= TOLERANCE_SECONDS) {\n  const expected = crypto\n    .createHmac(\"sha256\", $env.CONVEX_TO_N8N_SECRET)\n    .update(`${match[1]}.POST.${PATH}.${raw}`)\n    .digest();\n  const given = Buffer.from(match[2], \"hex\");\n  valid = given.length === expected.length && crypto.timingSafeEqual(given, expected);\n}\n\nreturn [{ json: valid ? { valid: true, payload: JSON.parse(raw) } : { valid: false } }];\n"
+      }
+    },
+    {
+      "id": "notify-if",
+      "name": "Signed by Convex?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        440,
+        0
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "valid",
+              "leftValue": "={{ $json.valid }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "notify-build",
+      "name": "Build email",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        660,
+        -100
+      ],
+      "parameters": {
+        "jsCode": "// Turns the minimal notification payload into a Resend email.\n// Env: EMAIL_FROM, APP_URL.\nconst { payload } = $input.first().json;\nconst { recipient, tool, loan, type, eventId } = payload;\nconst dates = `${loan.startDate} → ${loan.endDate}`;\n\nconst COPY = {\n  request_created: [`New request for your ${tool.name}`, `A neighbor asked to borrow your ${tool.name} for ${dates}.`],\n  request_approved: [`Approved: ${tool.name}`, `Your request to borrow the ${tool.name} for ${dates} was approved. You'll find the lender's email in LendLoop.`],\n  request_declined: [`Request declined: ${tool.name}`, `Your request to borrow the ${tool.name} for ${dates} was declined.`],\n  request_cancelled: [`Request cancelled: ${tool.name}`, `The request to borrow the ${tool.name} for ${dates} was cancelled.`],\n  loan_returned: [`Returned: ${tool.name}`, `The loan of the ${tool.name} (${dates}) is marked returned. Thanks for being a good neighbor!`],\n};\nconst [subject, line] = COPY[type] ?? [`LendLoop update: ${tool.name}`, `There's an update on ${tool.name}.`];\nconst link = `${$env.APP_URL ?? \"http://localhost:3000\"}/requests`;\n\nreturn [\n  {\n    json: {\n      idempotencyKey: eventId,\n      email: {\n        from: $env.EMAIL_FROM,\n        to: [recipient.email],\n        subject,\n        text: `Hi ${recipient.firstName},\\n\\n${line}\\n\\n${link}\\n\\n— LendLoop`,\n      },\n    },\n  },\n];\n"
+      }
+    },
+    {
+      "id": "notify-send",
+      "name": "Send email",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        880,
+        -100
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.RESEND_BASE_URL }}/emails",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Idempotency-Key",
+              "value": "={{ $json.idempotencyKey }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json.email) }}",
+        "options": {
+          "timeout": 15000
+        }
+      },
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "lendloopResendApi",
+          "name": "Resend API"
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 2000,
+      "onError": "continueErrorOutput"
+    },
+    {
+      "id": "notify-ok",
+      "name": "Accepted",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        1100,
+        -180
+      ],
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { \"sent\": true } }}",
+        "options": {
+          "responseCode": 200
+        }
+      }
+    },
+    {
+      "id": "notify-failed",
+      "name": "Send failed",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        1100,
+        -20
+      ],
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { \"sent\": false } }}",
+        "options": {
+          "responseCode": 502
+        }
+      }
+    },
+    {
+      "id": "notify-reject",
+      "name": "Unauthorized",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        660,
+        100
+      ],
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { \"error\": \"unauthorized\" } }}",
+        "options": {
+          "responseCode": 401
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Loan event": {
+      "main": [
+        [
+          {
+            "node": "Verify signature",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Verify signature": {
+      "main": [
+        [
+          {
+            "node": "Signed by Convex?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Signed by Convex?": {
+      "main": [
+        [
+          {
+            "node": "Build email",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Unauthorized",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build email": {
+      "main": [
+        [
+          {
+            "node": "Send email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send email": {
+      "main": [
+        [
+          {
+            "node": "Accepted",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Send failed",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "saveDataErrorExecution": "all",
+    "saveDataSuccessExecution": "none",
+    "errorWorkflow": "LendLoopErrors01"
+  },
+  "pinData": {},
+  "tags": []
+}

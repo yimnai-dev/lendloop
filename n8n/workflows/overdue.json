@@ -1,0 +1,300 @@
+{
+  "id": "LendLoopOverdue1",
+  "name": "LendLoop · Daily overdue reminders",
+  "active": false,
+  "nodes": [
+    {
+      "id": "overdue-schedule",
+      "name": "Every day at 09:00",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        0
+      ],
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 9 * * *"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "overdue-manual",
+      "name": "Run now",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        160
+      ],
+      "parameters": {}
+    },
+    {
+      "id": "overdue-sign",
+      "name": "Sign request",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        220,
+        0
+      ],
+      "parameters": {
+        "jsCode": "// Signs GET /automation/overdue-loans. Env: N8N_TO_CONVEX_SECRET.\nconst crypto = require(\"crypto\");\n\nconst path = \"/automation/overdue-loans\";\nconst t = Math.floor(Date.now() / 1000);\nconst v1 = crypto\n  .createHmac(\"sha256\", $env.N8N_TO_CONVEX_SECRET)\n  .update(`${t}.GET.${path}.`)\n  .digest(\"hex\");\n\nreturn [{ json: { path, signature: `t=${t},v1=${v1}` } }];\n"
+      }
+    },
+    {
+      "id": "overdue-fetch",
+      "name": "Fetch overdue loans",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        440,
+        0
+      ],
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $env.CONVEX_SITE_URL }}{{ $json.path }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-lendloop-signature",
+              "value": "={{ $json.signature }}"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 15000
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 2000
+    },
+    {
+      "id": "overdue-split",
+      "name": "Split reminders",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        660,
+        0
+      ],
+      "parameters": {
+        "jsCode": "// One item per reminder, with the email Resend should send.\n// Env: EMAIL_FROM, APP_URL.\nconst { reminders } = $input.first().json;\nconst link = `${$env.APP_URL ?? \"http://localhost:3000\"}/requests`;\n\nreturn reminders.map((reminder) => ({\n  json: {\n    reminderKey: reminder.reminderKey,\n    email: {\n      from: $env.EMAIL_FROM,\n      to: [reminder.recipient.email],\n      subject: `Reminder: please return the ${reminder.tool.name}`,\n      text:\n        `Hi ${reminder.recipient.firstName},\\n\\n` +\n        `The ${reminder.tool.name} was due back on ${reminder.loan.endDate} ` +\n        `(${reminder.daysOverdue} day${reminder.daysOverdue === 1 ? \"\" : \"s\"} ago). ` +\n        `Please arrange the return with the lender.\\n\\n${link}\\n\\n— LendLoop`,\n    },\n  },\n}));\n"
+      }
+    },
+    {
+      "id": "overdue-send",
+      "name": "Send reminder",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        880,
+        0
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.RESEND_BASE_URL }}/emails",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Idempotency-Key",
+              "value": "={{ $json.reminderKey }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json.email) }}",
+        "options": {
+          "timeout": 15000
+        }
+      },
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "lendloopResendApi",
+          "name": "Resend API"
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 2000,
+      "onError": "continueErrorOutput"
+    },
+    {
+      "id": "overdue-sent",
+      "name": "Sign sent",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1100,
+        -100
+      ],
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "// Runs once per item. Signs the reminder write-back for POST /automation/reminders.\n// STATUS is replaced at build time (\"sent\" or \"failed\"). Env: N8N_TO_CONVEX_SECRET.\nconst crypto = require(\"crypto\");\n\nconst STATUS = \"sent\";\nconst path = \"/automation/reminders\";\nconst { reminderKey } = $(\"Split reminders\").item.json;\nconst detail = STATUS === \"failed\" ? String($json.error?.message ?? \"send failed\").slice(0, 500) : undefined;\nconst body = JSON.stringify(detail === undefined ? { reminderKey, status: STATUS } : { reminderKey, status: STATUS, detail });\nconst t = Math.floor(Date.now() / 1000);\nconst v1 = crypto\n  .createHmac(\"sha256\", $env.N8N_TO_CONVEX_SECRET)\n  .update(`${t}.POST.${path}.${body}`)\n  .digest(\"hex\");\n\nreturn { json: { path, body, signature: `t=${t},v1=${v1}` } };\n"
+      }
+    },
+    {
+      "id": "overdue-failed",
+      "name": "Sign failed",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1100,
+        100
+      ],
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "// Runs once per item. Signs the reminder write-back for POST /automation/reminders.\n// STATUS is replaced at build time (\"sent\" or \"failed\"). Env: N8N_TO_CONVEX_SECRET.\nconst crypto = require(\"crypto\");\n\nconst STATUS = \"failed\";\nconst path = \"/automation/reminders\";\nconst { reminderKey } = $(\"Split reminders\").item.json;\nconst detail = STATUS === \"failed\" ? String($json.error?.message ?? \"send failed\").slice(0, 500) : undefined;\nconst body = JSON.stringify(detail === undefined ? { reminderKey, status: STATUS } : { reminderKey, status: STATUS, detail });\nconst t = Math.floor(Date.now() / 1000);\nconst v1 = crypto\n  .createHmac(\"sha256\", $env.N8N_TO_CONVEX_SECRET)\n  .update(`${t}.POST.${path}.${body}`)\n  .digest(\"hex\");\n\nreturn { json: { path, body, signature: `t=${t},v1=${v1}` } };\n"
+      }
+    },
+    {
+      "id": "overdue-record",
+      "name": "Record result",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1320,
+        0
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.CONVEX_SITE_URL }}{{ $json.path }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-lendloop-signature",
+              "value": "={{ $json.signature }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "application/json",
+        "body": "={{ $json.body }}",
+        "options": {
+          "timeout": 15000
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 2000
+    }
+  ],
+  "connections": {
+    "Every day at 09:00": {
+      "main": [
+        [
+          {
+            "node": "Sign request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Run now": {
+      "main": [
+        [
+          {
+            "node": "Sign request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Sign request": {
+      "main": [
+        [
+          {
+            "node": "Fetch overdue loans",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch overdue loans": {
+      "main": [
+        [
+          {
+            "node": "Split reminders",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Split reminders": {
+      "main": [
+        [
+          {
+            "node": "Send reminder",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send reminder": {
+      "main": [
+        [
+          {
+            "node": "Sign sent",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Sign failed",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Sign sent": {
+      "main": [
+        [
+          {
+            "node": "Record result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Sign failed": {
+      "main": [
+        [
+          {
+            "node": "Record result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "saveDataErrorExecution": "all",
+    "saveDataSuccessExecution": "none",
+    "errorWorkflow": "LendLoopErrors01"
+  },
+  "pinData": {},
+  "tags": []
+}

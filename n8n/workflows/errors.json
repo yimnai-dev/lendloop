@@ -1,0 +1,95 @@
+{
+  "id": "LendLoopErrors01",
+  "name": "LendLoop · Error handler",
+  "active": false,
+  "nodes": [
+    {
+      "id": "errors-trigger",
+      "name": "Workflow failed",
+      "type": "n8n-nodes-base.errorTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ],
+      "parameters": {}
+    },
+    {
+      "id": "errors-sign",
+      "name": "Sign report",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        220,
+        0
+      ],
+      "parameters": {
+        "jsCode": "// Signs the error report for POST /automation/errors. Env: N8N_TO_CONVEX_SECRET.\nconst crypto = require(\"crypto\");\n\nconst { execution = {}, workflow = {}, trigger } = $input.first().json;\nconst path = \"/automation/errors\";\nconst report = {\n  executionId: String(execution.id ?? `trigger-${Date.now()}`),\n  workflow: String(workflow.name ?? \"unknown\").slice(0, 200),\n  ...(execution.lastNodeExecuted ? { node: String(execution.lastNodeExecuted).slice(0, 200) } : {}),\n  message: String(execution.error?.message ?? trigger?.error?.message ?? \"Unknown error\").slice(0, 2000),\n};\nconst body = JSON.stringify(report);\nconst t = Math.floor(Date.now() / 1000);\nconst v1 = crypto\n  .createHmac(\"sha256\", $env.N8N_TO_CONVEX_SECRET)\n  .update(`${t}.POST.${path}.${body}`)\n  .digest(\"hex\");\n\nreturn [{ json: { path, body, signature: `t=${t},v1=${v1}` } }];\n"
+      }
+    },
+    {
+      "id": "errors-record",
+      "name": "Record in Convex",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        440,
+        0
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.CONVEX_SITE_URL }}{{ $json.path }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-lendloop-signature",
+              "value": "={{ $json.signature }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "application/json",
+        "body": "={{ $json.body }}",
+        "options": {
+          "timeout": 15000
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 2000
+    }
+  ],
+  "connections": {
+    "Workflow failed": {
+      "main": [
+        [
+          {
+            "node": "Sign report",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Sign report": {
+      "main": [
+        [
+          {
+            "node": "Record in Convex",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "saveDataErrorExecution": "all",
+    "saveDataSuccessExecution": "none"
+  },
+  "pinData": {},
+  "tags": []
+}

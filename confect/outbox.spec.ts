@@ -37,4 +37,8 @@ export default GroupSpec.make()
   )
   .addFunction(
     FunctionSpec.internalMutation({ name: "sweep", returns: () => Schema.Null }),
+  )
+  .addFunction(
+    /** Operator tool: re-queue dead events after fixing the cause. Returns how many. */
+    FunctionSpec.internalMutation({ name: "redrive", returns: () => Schema.Finite }),
   );

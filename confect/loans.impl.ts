@@ -1,17 +1,15 @@
 import { FunctionImpl, GroupImpl } from "@confect/server";
-import * as Clock from "effect/Clock";
-import * as Config from "effect/Config";
 import * as Effect from "effect/Effect";
 import * as Layer from "effect/Layer";
 import { overlaps } from "../shared/domain/DateRange";
 import { DateConflict, Forbidden, InvalidRequest } from "../shared/domain/errors";
-import { todayIn } from "../shared/domain/IsoDate";
 import { checkRequestWindow } from "../shared/domain/loanRequest";
 import type { LoanAction } from "../shared/domain/loanTransitions";
 import type { Id } from "./_generated/id";
 import databaseSchema from "./_generated/schema";
 import { DatabaseReader, DatabaseWriter } from "./_generated/services";
 import { consumeRateLimit } from "./lib/rateLimit";
+import { appToday as today } from "./lib/today";
 import { toLoanView } from "./lib/views";
 import loans from "./loans.spec";
 import { loansForTool } from "./loans/queries";
@@ -20,12 +18,6 @@ import { enqueueNotification } from "./outbox/enqueue";
 import RequireUserImpl from "./middleware/RequireUser.impl";
 import { CurrentUser } from "./middleware/RequireUser.spec";
 import { requireLoanParty, requireVisibleTool } from "./policies/access";
-
-/** The neighborhood's time zone decides what "today" means. */
-const today = Effect.gen(function* () {
-  const timeZone = yield* Config.String("APP_TZ").pipe(Config.withDefault("UTC"));
-  return todayIn(timeZone, yield* Clock.currentTimeMillis);
-}).pipe(Effect.orDie);
 
 const request = FunctionImpl.make(databaseSchema, loans, "request", ({ toolId, dates }) =>
   Effect.gen(function* () {

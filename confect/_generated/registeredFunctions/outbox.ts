@@ -12,4 +12,5 @@ export default {
 ["recordSuccess"]: RegisteredConvexFunction.register({ ...definitions["recordSuccess"], handler: forward(definitions["recordSuccess"].handler) }),
 ["recordFailure"]: RegisteredConvexFunction.register({ ...definitions["recordFailure"], handler: forward(definitions["recordFailure"].handler) }),
 ["sweep"]: RegisteredConvexFunction.register({ ...definitions["sweep"], handler: forward(definitions["sweep"].handler) }),
+["redrive"]: RegisteredConvexFunction.register({ ...definitions["redrive"], handler: forward(definitions["redrive"].handler) }),
 } as RegisteredFunctions.RegisteredFunctionsForGroupSpec<typeof import("../../outbox.spec")["default"]>;

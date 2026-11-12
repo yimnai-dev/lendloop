@@ -1,26 +1,20 @@
-import * as Clock from "effect/Clock";
-import * as Config from "effect/Config";
 import * as Effect from "effect/Effect";
 import * as Layer from "effect/Layer";
 import * as HttpRouter from "effect/http/HttpRouter";
-import { todayIn } from "../../shared/domain/IsoDate";
 import {
   AUTOMATION_PATHS,
   ReminderResult,
   WorkflowError,
 } from "../../shared/integration/automation";
 import refs from "../_generated/refs";
+import { appToday } from "../lib/today";
 import { MutationRunner, QueryRunner } from "../_generated/services";
 import { decodeBody, jsonResponse, signedRoute, verifiedBody } from "./signed";
 
 const overdueLoans = signedRoute(
   Effect.gen(function* () {
     yield* verifiedBody;
-    const timeZone = yield* Config.String("APP_TZ").pipe(
-      Config.withDefault("UTC"),
-      Effect.orDie,
-    );
-    const today = todayIn(timeZone, yield* Clock.currentTimeMillis);
+    const today = yield* appToday;
     const { runQuery } = yield* QueryRunner;
     return jsonResponse(
       yield* runQuery(refs.internal.automation.overdueLoans, { today }).pipe(

@@ -144,11 +144,38 @@ const sweep = FunctionImpl.make(databaseSchema, outbox, "sweep", () =>
   }).pipe(Effect.orDie),
 );
 
+const redrive = FunctionImpl.make(databaseSchema, outbox, "redrive", () =>
+  Effect.gen(function* () {
+    const reader = yield* DatabaseReader;
+    const writer = yield* DatabaseWriter;
+    const scheduler = yield* Scheduler;
+    const now = yield* Clock.currentTimeMillis;
+    const dead = yield* reader
+      .table("outboxEvents")
+      .index("by_status_nextAttemptAt", (q) => q.eq("status", "dead"))
+      .take(SWEEP_BATCH);
+
+    // The n8n Idempotency-Key (eventId) keeps a redriven event from emailing twice.
+    yield* Effect.forEach(dead, (row) =>
+      Effect.andThen(
+        writer
+          .table("outboxEvents")
+          .patch(row._id, { status: "pending", attempts: 0, nextAttemptAt: now }),
+        scheduler.runAfter(Duration.zero, refs.internal.outbox.dispatch, {
+          outboxId: row._id,
+        }),
+      ),
+    );
+    return dead.length;
+  }).pipe(Effect.orDie),
+);
+
 export default GroupImpl.make(databaseSchema, outbox).pipe(
   Layer.provide(load),
   Layer.provide(dispatch),
   Layer.provide(recordSuccess),
   Layer.provide(recordFailure),
   Layer.provide(sweep),
+  Layer.provide(redrive),
   GroupImpl.finalize,
 );

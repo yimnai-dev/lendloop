@@ -1,0 +1,68 @@
+# Local automation stack: n8n + a Resend-compatible mail catcher.
+#
+#   cp .env.docker.example .env.docker   # fill in the two shared secrets
+#   docker compose up -d
+#   bun scripts/n8n-setup.ts             # credential + workflows, then activate
+#
+# Optional public URL for a cloud Convex deployment to reach n8n:
+#   docker compose --profile tunnel up -d && docker compose logs tunnel
+name: lendloop
+
+services:
+  n8n:
+    image: n8nio/n8n:${N8N_VERSION:-2.47.5}
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:5678:5678"
+    # Secrets (CONVEX_TO_N8N_SECRET, N8N_TO_CONVEX_SECRET, N8N_ENCRYPTION_KEY)
+    # live only in this gitignored file, never in the workflow JSON.
+    env_file: .env.docker
+    environment:
+      GENERIC_TIMEZONE: ${APP_TZ:-UTC}
+      TZ: ${APP_TZ:-UTC}
+      N8N_HOST: localhost
+      WEBHOOK_URL: ${N8N_PUBLIC_URL:-http://localhost:5678/}
+      N8N_LOG_LEVEL: ${N8N_LOG_LEVEL:-info}
+      N8N_DIAGNOSTICS_ENABLED: "false"
+      N8N_PERSONALIZATION_ENABLED: "false"
+      N8N_ENFORCE_SETTINGS_FILE_PERMISSIONS: "true"
+      # Code nodes read their secrets from $env and sign with node:crypto.
+      N8N_BLOCK_ENV_ACCESS_IN_NODE: "false"
+      NODE_FUNCTION_ALLOW_BUILTIN: crypto
+      # Keep only failures; successful runs would store recipient emails.
+      EXECUTIONS_DATA_SAVE_ON_SUCCESS: none
+      EXECUTIONS_DATA_PRUNE: "true"
+      EXECUTIONS_DATA_MAX_AGE: "168"
+      CONVEX_SITE_URL: ${CONVEX_SITE_URL_FROM_DOCKER:-http://host.docker.internal:3211}
+      RESEND_BASE_URL: ${RESEND_BASE_URL:-http://resendev:3099}
+      EMAIL_FROM: ${EMAIL_FROM:-LendLoop <loans@lendloop.test>}
+      APP_URL: ${APP_URL:-http://localhost:3000}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    volumes:
+      - n8n_data:/home/node/.n8n
+      - ./n8n:/lendloop:ro
+    depends_on:
+      - resendev
+
+  # Accepts POST /emails like Resend (any bearer key) and shows them at :3099.
+  resendev:
+    image: jupitercl/resendev:latest
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:3099:3099"
+    environment:
+      RESENDEV_PORT: "3099"
+    volumes:
+      - resendev_data:/app/data
+
+  tunnel:
+    image: cloudflare/cloudflared:latest
+    profiles: [tunnel]
+    command: tunnel --no-autoupdate --url http://n8n:5678
+    depends_on:
+      - n8n
+
+volumes:
+  n8n_data:
+  resendev_data:
