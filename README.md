@@ -4,6 +4,8 @@
 
 Built with Next.js 16 (App Router, Cache Components), Clerk, Convex through [Confect](https://confect.dev) (Effect 4), n8n and TypeScript.
 
+**Live:** https://lendloop-rho.vercel.app (Vercel, backed by the Convex dev deployment; emails go through a local n8n, so they only flow while that stack is running).
+
 - [Quick start](#quick-start)
 - [Environment variables](#environment-variables)
 - [Architecture](#architecture)
