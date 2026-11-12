@@ -2,7 +2,7 @@ import { Table } from "@confect/core";
 import * as Schema from "effect/Schema";
 import { Category } from "../../shared/domain/Category";
 import { Condition } from "../../shared/domain/Condition";
-import { ToolDescription, ToolName } from "../../shared/domain/Tool";
+import { MAX_TOOL_PHOTOS, ToolDescription, ToolName } from "../../shared/domain/Tool";
 import { Id } from "../_generated/id";
 
 export default Table.make(() =>
@@ -12,7 +12,7 @@ export default Table.make(() =>
     category: Category,
     condition: Condition,
     description: ToolDescription,
-    photoId: Schema.optionalKey(Id("_storage")),
+    photoIds: Schema.Array(Id("_storage")).check(Schema.isMaxLength(MAX_TOOL_PHOTOS)),
     /** Soft delete: archived tools keep their loan history. */
     archived: Schema.Boolean,
   }),

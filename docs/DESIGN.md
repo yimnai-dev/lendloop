@@ -59,3 +59,12 @@ No `any`, no needless casts, generics where they help, small files, no `useEffec
 - Playwright E2E happy path (Clerk test mode)
 - GitHub Actions: typecheck, oxlint, oxfmt --check, tests
 - Seed script with demo tools and an overdue loan
+
+## Decisions made during build
+
+- **Loan limits**: start between today and 60 days ahead; length 1–14 days. Enforced in a shared schema, so the form and the server agree.
+- **One pending request per borrower per tool.**
+- **Photos**: up to 3 per tool, each ≤ 5 MB, jpeg/png/webp. The type is checked from stored file metadata on the server. Photos are shown only to signed-in users.
+- **"Today" in the UI** is derived on the client in `NEXT_PUBLIC_APP_TZ` using `shared/domain/loanView`. Queries return raw dates and never read the clock, so they stay cacheable. Server-side "today" (overdue endpoint) uses `APP_TZ`.
+- **Svix v2** `verify()` returns nothing, so the webhook verifies the raw body first and only then parses it.
+- **Dev**: `convex dev` doesn't watch `confect/`, so `scripts/watch-confect.ts` forwards edits by touching a generated Convex entry point.

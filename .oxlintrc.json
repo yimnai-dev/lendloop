@@ -62,7 +62,9 @@
       {
         "allow": ["**/*.css", "temporal-polyfill/global"]
       }
-    ]
+    ],
+    "typescript/consistent-return": "off",
+    "consistent-return": "off"
   },
   "ignorePatterns": [
     "**/_generated/**",

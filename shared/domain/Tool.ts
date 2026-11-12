@@ -8,6 +8,10 @@ const trimmedText = (min: number, max: number) =>
     Schema.isMaxLength(max, { message: `Must be at most ${max} characters` }),
   );
 
+export const MAX_TOOL_PHOTOS = 3;
+export const MAX_PHOTO_BYTES = 5 * 1024 * 1024;
+export const PHOTO_TYPES = ["image/jpeg", "image/png", "image/webp"] as const;
+
 export const ToolName = trimmedText(2, 80);
 export const ToolDescription = trimmedText(0, 500);
 
