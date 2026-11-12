@@ -12,4 +12,6 @@ export default {
 ["listings"]: RegisteredConvexFunction.register({ ...definitions["listings"], handler: forward(definitions["listings"].handler) }),
 ["removeListing"]: RegisteredConvexFunction.register({ ...definitions["removeListing"], handler: forward(definitions["removeListing"].handler) }),
 ["setTrustedLender"]: RegisteredConvexFunction.register({ ...definitions["setTrustedLender"], handler: forward(definitions["setTrustedLender"].handler) }),
+["automation"]: RegisteredConvexFunction.register({ ...definitions["automation"], handler: forward(definitions["automation"].handler) }),
+["redriveNotifications"]: RegisteredConvexFunction.register({ ...definitions["redriveNotifications"], handler: forward(definitions["redriveNotifications"].handler) }),
 } as RegisteredFunctions.RegisteredFunctionsForGroupSpec<typeof import("../../admin.spec")["default"]>;

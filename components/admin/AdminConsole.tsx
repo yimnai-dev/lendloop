@@ -3,11 +3,17 @@
 import { useQueryStates } from "nuqs";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs";
 import { ADMIN_TABS, adminParams } from "~/lib/searchParams";
+import { AdminAutomation } from "./AdminAutomation";
 import { AdminListings } from "./AdminListings";
 import { AdminLoans } from "./AdminLoans";
 import { AdminUsers } from "./AdminUsers";
 
-const LABEL = { loans: "All loans", users: "Neighbors", listings: "Listings" } as const;
+const LABEL = {
+  loans: "All loans",
+  users: "Neighbors",
+  listings: "Listings",
+  automation: "Automation",
+} as const;
 
 /** Only the active tab mounts, so only its query subscribes. */
 export function AdminConsole() {
@@ -34,6 +40,9 @@ export function AdminConsole() {
       </TabsContent>
       <TabsContent value="listings" className="pt-4">
         <AdminListings />
+      </TabsContent>
+      <TabsContent value="automation" className="pt-4">
+        <AdminAutomation />
       </TabsContent>
     </Tabs>
   );

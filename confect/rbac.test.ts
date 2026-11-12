@@ -199,6 +199,10 @@ describe("admin", () => {
     const asBen = app.as(ben);
     expect(await outcome(asBen.query(api.admin.loans, {}))).toBe("AdminOnly");
     expect(await outcome(asBen.query(api.admin.listings, {}))).toBe("AdminOnly");
+    expect(await outcome(asBen.query(api.admin.automation, {}))).toBe("AdminOnly");
+    expect(await outcome(asBen.mutation(api.admin.redriveNotifications, {}))).toBe(
+      "AdminOnly",
+    );
     expect(await outcome(asBen.mutation(api.admin.removeListing, { toolId }))).toBe(
       "AdminOnly",
     );

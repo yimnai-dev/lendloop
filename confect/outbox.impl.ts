@@ -16,6 +16,7 @@ import {
 import { recordAutomationEvent } from "./lib/automationEvents";
 import { MAX_DELIVERY_ATTEMPTS, nextAttemptDelay } from "./lib/backoff";
 import outbox from "./outbox.spec";
+import { redriveDead } from "./outbox/redrive";
 import { N8nNotifier } from "./services/N8nNotifier";
 
 /** A dispatch that hasn't reported back after this long is considered lost. */
@@ -144,31 +145,7 @@ const sweep = FunctionImpl.make(databaseSchema, outbox, "sweep", () =>
   }).pipe(Effect.orDie),
 );
 
-const redrive = FunctionImpl.make(databaseSchema, outbox, "redrive", () =>
-  Effect.gen(function* () {
-    const reader = yield* DatabaseReader;
-    const writer = yield* DatabaseWriter;
-    const scheduler = yield* Scheduler;
-    const now = yield* Clock.currentTimeMillis;
-    const dead = yield* reader
-      .table("outboxEvents")
-      .index("by_status_nextAttemptAt", (q) => q.eq("status", "dead"))
-      .take(SWEEP_BATCH);
-
-    // The n8n Idempotency-Key (eventId) keeps a redriven event from emailing twice.
-    yield* Effect.forEach(dead, (row) =>
-      Effect.andThen(
-        writer
-          .table("outboxEvents")
-          .patch(row._id, { status: "pending", attempts: 0, nextAttemptAt: now }),
-        scheduler.runAfter(Duration.zero, refs.internal.outbox.dispatch, {
-          outboxId: row._id,
-        }),
-      ),
-    );
-    return dead.length;
-  }).pipe(Effect.orDie),
-);
+const redrive = FunctionImpl.make(databaseSchema, outbox, "redrive", () => redriveDead);
 
 export default GroupImpl.make(databaseSchema, outbox).pipe(
   Layer.provide(load),

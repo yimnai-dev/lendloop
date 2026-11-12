@@ -4,6 +4,7 @@ import { IsoDate } from "../shared/domain/IsoDate";
 import { LoanStatus } from "../shared/domain/LoanStatus";
 import { Email, Role } from "../shared/domain/User";
 import { Id } from "./_generated/id";
+import { AutomationKind } from "./tables/automationEvents";
 
 /**
  * Read models for admins only. Admins moderate, so they see who owns what,
@@ -54,3 +55,22 @@ export const AdminListing = Schema.Struct({
   onLoan: Schema.Boolean,
 });
 export type AdminListing = typeof AdminListing.Type;
+
+export const AutomationHealth = Schema.Struct({
+  outbox: Schema.Struct({
+    pending: Schema.Finite,
+    delivered: Schema.Finite,
+    dead: Schema.Finite,
+  }),
+  /** Most recent first. Details hold error text and dates, never emails. */
+  recent: Schema.Array(
+    Schema.Struct({
+      _id: Id("automationEvents"),
+      kind: AutomationKind,
+      at: Schema.Finite,
+      detail: Schema.NullOr(Schema.String),
+      toolName: Schema.NullOr(Schema.String),
+    }),
+  ),
+});
+export type AutomationHealth = typeof AutomationHealth.Type;

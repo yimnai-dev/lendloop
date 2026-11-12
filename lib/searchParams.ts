@@ -8,7 +8,7 @@ export const browseParams = {
   trusted: parseAsBoolean.withDefault(false),
 };
 
-export const ADMIN_TABS = ["loans", "users", "listings"] as const;
+export const ADMIN_TABS = ["loans", "users", "listings", "automation"] as const;
 
 /** Admin console tab and loan filter, also URL state. */
 export const adminParams = {

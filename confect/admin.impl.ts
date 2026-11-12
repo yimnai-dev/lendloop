@@ -11,7 +11,8 @@ import { archiveTool } from "./loans/archiveTool";
 import RequireRoleImpl from "./middleware/RequireRole.impl";
 import { CurrentUser } from "./middleware/RequireUser.spec";
 import RequireUserImpl from "./middleware/RequireUser.impl";
-import { loadTool, loadUser } from "./policies/load";
+import { redriveDead } from "./outbox/redrive";
+import { loadLoan, loadTool, loadUser } from "./policies/load";
 
 const LIST_LIMIT = 200;
 
@@ -95,12 +96,67 @@ const setTrustedLender = FunctionImpl.make(
     }),
 );
 
+const OUTBOX_COUNT_CAP = 1000;
+const RECENT_EVENTS = 25;
+
+const automation = FunctionImpl.make(databaseSchema, admin, "automation", () =>
+  Effect.gen(function* () {
+    const reader = yield* DatabaseReader;
+    const count = (status: "pending" | "delivered" | "dead") =>
+      reader
+        .table("outboxEvents")
+        .index("by_status_nextAttemptAt", (q) => q.eq("status", status))
+        .take(OUTBOX_COUNT_CAP)
+        .pipe(Effect.map((rows) => rows.length));
+    const events = yield* reader
+      .table("automationEvents")
+      .index("by_creation_time", "desc")
+      .take(RECENT_EVENTS);
+    const recent = yield* Effect.forEach(events, (event) =>
+      Effect.gen(function* () {
+        const toolName =
+          event.loanId === undefined
+            ? null
+            : yield* loadLoan(event.loanId).pipe(
+                Effect.flatMap((loan) => loadTool(loan.toolId)),
+                Effect.map((tool) => tool.name),
+                Effect.orElseSucceed(() => null),
+              );
+        return {
+          _id: event._id,
+          kind: event.kind,
+          at: event.at,
+          detail: event.detail ?? null,
+          toolName,
+        };
+      }),
+    );
+    return {
+      outbox: yield* Effect.all({
+        pending: count("pending"),
+        delivered: count("delivered"),
+        dead: count("dead"),
+      }),
+      recent,
+    };
+  }).pipe(Effect.orDie),
+);
+
+const redriveNotifications = FunctionImpl.make(
+  databaseSchema,
+  admin,
+  "redriveNotifications",
+  () => redriveDead,
+);
+
 export default GroupImpl.make(databaseSchema, admin).pipe(
   Layer.provide(loans),
   Layer.provide(users),
   Layer.provide(listings),
   Layer.provide(removeListing),
   Layer.provide(setTrustedLender),
+  Layer.provide(automation),
+  Layer.provide(redriveNotifications),
   Layer.provide(RequireRoleImpl),
   Layer.provide(RequireUserImpl),
   GroupImpl.finalize,

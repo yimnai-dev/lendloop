@@ -3,7 +3,7 @@ import type { AutomationKind } from "~/confect/tables/automationEvents";
 
 export type TimelineEntry = { readonly at: number; readonly label: string };
 
-const AUTOMATION_LABELS: Record<typeof AutomationKind.Type, string> = {
+export const AUTOMATION_LABELS: Record<typeof AutomationKind.Type, string> = {
   notification_delivered: "Email notification sent",
   notification_dead: "Email notification failed",
   reminder_sent: "Overdue reminder sent",
