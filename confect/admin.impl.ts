@@ -7,6 +7,8 @@ import databaseSchema from "./_generated/schema";
 import { DatabaseReader, DatabaseWriter } from "./_generated/services";
 import admin from "./admin.spec";
 import { toAdminListing, toAdminLoan, toAdminUser } from "./admin/views";
+import { syncOwnerTrust } from "./lib/ownerTrust";
+import { mapPage } from "./lib/pages";
 import { archiveTool } from "./loans/archiveTool";
 import RequireRoleImpl from "./middleware/RequireRole.impl";
 import { CurrentUser } from "./middleware/RequireUser.spec";
@@ -16,17 +18,19 @@ import { loadLoan, loadTool, loadUser } from "./policies/load";
 
 const LIST_LIMIT = 200;
 
-const loans = FunctionImpl.make(databaseSchema, admin, "loans", ({ status }) =>
-  Effect.gen(function* () {
-    const reader = yield* DatabaseReader;
-    const docs = yield* status === undefined
-      ? reader.table("loans").index("by_creation_time", "desc").take(LIST_LIMIT)
-      : reader
-          .table("loans")
-          .index("by_status_endDate", (q) => q.eq("status", status), "desc")
-          .take(LIST_LIMIT);
-    return yield* Effect.forEach(docs, toAdminLoan);
-  }).pipe(Effect.orDie),
+const loans = FunctionImpl.make(
+  databaseSchema,
+  admin,
+  "loans",
+  ({ status, paginationOpts }) =>
+    Effect.gen(function* () {
+      const table = (yield* DatabaseReader).table("loans");
+      const query =
+        status === undefined
+          ? table.index("by_creation_time", "desc")
+          : table.index("by_status_endDate", (q) => q.eq("status", status), "desc");
+      return yield* mapPage(yield* query.paginate(paginationOpts), toAdminLoan);
+    }).pipe(Effect.orDie),
 );
 
 const users = FunctionImpl.make(databaseSchema, admin, "users", () =>
@@ -83,6 +87,7 @@ const setTrustedLender = FunctionImpl.make(
         .table("users")
         .patch(target._id, { trustedLender: trusted })
         .pipe(Effect.orDie);
+      yield* syncOwnerTrust(target._id, trusted).pipe(Effect.orDie);
       yield* writer
         .table("trustAudit")
         .insert({

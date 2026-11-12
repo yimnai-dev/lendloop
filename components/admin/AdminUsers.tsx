@@ -2,7 +2,6 @@
 
 import { useMutation, useQuery } from "@confect/react";
 import { QueryView } from "~/components/app/QueryView";
-import { Badge } from "~/components/ui/badge";
 import { Switch } from "~/components/ui/switch";
 import {
   Table,
@@ -49,7 +48,9 @@ export function AdminUsers() {
                     <div className="flex items-center gap-2 font-medium">
                       <Avatar name={user.firstName} className="size-7 text-xs" />
                       {user.firstName}
-                      {user.role === "admin" && <Badge variant="info">admin</Badge>}
+                      {user.role === "admin" && (
+                        <span className="eyebrow text-[10px]">Admin</span>
+                      )}
                     </div>
                   </TableCell>
                   <TableCell className="text-muted-foreground">{user.email}</TableCell>

@@ -12,15 +12,18 @@ Built with Next.js 16 (App Router, Cache Components), Clerk, Convex through [Con
 - [Testing](#testing)
 - [Project layout](#project-layout)
 - [Trade-offs and what's not done](#trade-offs-and-whats-not-done)
-- Also: [PRODUCTION.md](docs/PRODUCTION.md) · [HEALTHCARE.md](docs/HEALTHCARE.md) · [DESIGN.md](docs/DESIGN.md)
+- **Why we picked what we picked: [DECISIONS.md](docs/DECISIONS.md)**
+- Also: [PRODUCTION.md](docs/PRODUCTION.md) · [HEALTHCARE.md](docs/HEALTHCARE.md) · [DESIGN.md](docs/DESIGN.md) (raw build log)
 
 ## Features
 
-| Who            | Can                                                                                                                                                                                                                                                                                                                                                            |
-| -------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Visitor        | See the tagline and a read-only list of tools (**name and category only**), then sign in                                                                                                                                                                                                                                                                       |
-| Signed-in user | Browse all tools with availability, a category filter and a "Trusted lenders only" filter; list tools (name, category, condition, description, up to 3 photos); request a tool for a date range; see **My listings**, **My requests** and **Incoming requests**; approve or decline requests for their own tools; mark loans returned; see a per-loan timeline |
-| Admin          | Everything above, plus **/admin**: every loan (filter by status, overdue badges), remove any listing, grant or revoke **Trusted Lender** (audited), and automation health with a "retry failed" button                                                                                                                                                         |
+| Who            | Can                                                                                                                                                                                                                                                                                                                                                                                                                                     |
+| -------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Visitor        | See the tagline and a read-only list of tools (**name and category only**), then sign in                                                                                                                                                                                                                                                                                                                                                |
+| Signed-in user | Browse all tools with availability, a category filter and a "Trusted lenders only" filter; list tools (name, category, condition, description, up to 3 photos); request a tool by picking dates on a calendar (booked days are blocked); see **Your shelf**, **Borrowing** and **Lending**, each split into Waiting / Out / History tabs; approve or decline requests for their own tools; mark loans returned; see a per-loan timeline |
+| Admin          | Everything above, plus **/admin**: every loan (filter by status, overdue badges), remove any listing, grant or revoke **Trusted Lender** (audited), and automation health with a "retry failed" button                                                                                                                                                                                                                                  |
+
+**Pagination.** Browse, Borrowing, Lending and admin Loans are cursor-paginated in Convex (`paginate()` on an index, newest first) with a "Show more" button: it keeps your place and stays correct while live updates arrive. The "Trusted lenders only" filter runs inside an index (`ownerTrusted` is kept on each tool), so every page is full.
 
 All of these rules are enforced in Convex functions. The UI only hides what you can't do. Loan rules:
 
@@ -188,6 +191,8 @@ Workflows live in [`n8n/workflows/`](n8n/workflows/). They're generated by `bun 
 
 ```bash
 bun run check   # oxfmt --check, oxlint (type-aware), typecheck, n8n JSON drift, vitest
+bunx playwright test                      # E2E against the running dev stack (bun run dev + n8n)
+SCREENS=1 bunx playwright test screens    # full-page screenshots into screens/ (SCREENS_WIDTH, SCREENS_USER)
 ```
 
 - `shared/**`: domain rules (state machine, date ranges, request window, overdue/availability) and HMAC signing (tampering, wrong secret, stale timestamps, malformed headers, and a cross-check against `node:crypto`, which is what n8n computes).
@@ -198,6 +203,11 @@ bun run check   # oxfmt --check, oxlint (type-aware), typecheck, n8n JSON drift,
   - email reveal only after approval;
   - overlap handling, outbox writes;
   - the signed automation endpoints (401s, 400s, idempotent write-backs).
+- `e2e/` (Playwright, Clerk testing tokens, one browser context per user):
+  - visitors see names and categories only;
+  - list → request → approve → return, asserting the "New request", "Approved" and "Returned" emails arrive through n8n in the resendev inbox, and that the lender's email appears to the borrower only after approval;
+  - admins remove listings and toggle Trusted Lender; non-admins get "Only admins can do that.".
+    Needs `CLERK_SECRET_KEY` (for testing tokens and ticket sign-in) and the three `+clerk_test` users in `e2e/users.ts` to exist in Clerk; `admin+clerk_test@example.com` must be in `ADMIN_EMAILS`.
 - CI: [`.github/workflows/ci.yml`](.github/workflows/ci.yml) runs the same checks, plus a Confect codegen drift check.
 
 ## Project layout
@@ -213,12 +223,13 @@ confect/            Convex source via Confect: *.spec.ts (API) + *.impl.ts, tabl
 convex/             generated Convex entry points (do not edit)
 n8n/code/           n8n Code-node JavaScript      n8n/workflows/  generated workflow JSON
 scripts/            n8n build/setup, signed automation CLI, Clerk webhook simulator, dev watcher
-docs/               DESIGN (decision log), PLAN, PRODUCTION, HEALTHCARE
+e2e/                Playwright specs and helpers
+docs/               DECISIONS (what and why), DESIGN (build log), PLAN, PRODUCTION, HEALTHCARE
 ```
 
 ## Trade-offs and what's not done
 
-- **No browser E2E suite.** The flows were exercised manually in a browser against Clerk test users. RBAC and loan rules are covered at the function level, where they're enforced. A Playwright suite with Clerk testing tokens would be the next addition.
+- **E2E runs locally, not in CI.** It needs the live stack (Convex, n8n, a mail inbox). CI runs the unit and function tests.
 - **Email delivery is at-least-once** between Convex and n8n. Idempotency keys make it effectively once at Resend. resendev doesn't implement idempotency, so a manual redrive locally can show a repeat.
 - **n8n runs Code nodes with `$env` access** (`N8N_BLOCK_ENV_ACCESS_IN_NODE=false`), so the signing secrets don't have to sit in the workflow JSON. n8n credentials can't feed arbitrary HMAC code in a Code node. [PRODUCTION.md](docs/PRODUCTION.md) covers hardening this.
 - **Single neighborhood, single time zone** (`APP_TZ`). Multi-tenant would need a `neighborhoodId` on every row and in every policy.

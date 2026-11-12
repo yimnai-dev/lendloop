@@ -10,7 +10,10 @@ import databaseSchema from "./_generated/schema";
 import { DatabaseReader, DatabaseWriter } from "./_generated/services";
 import { consumeRateLimit } from "./lib/rateLimit";
 import { appToday as today } from "./lib/today";
+import { mapPage } from "./lib/pages";
 import { toLoanView } from "./lib/views";
+import { type LoanGroup, loanGroupStatuses } from "../shared/domain/LoanStatus";
+import type { PaginationOptions } from "@confect/core";
 import loans from "./loans.spec";
 import { loansForTool } from "./loans/queries";
 import { applyTransition } from "./loans/transition";
@@ -95,11 +98,25 @@ const markReturned = FunctionImpl.make(
   ({ loanId }) => actOn(loanId, "markReturned"),
 );
 
-const listBy = (index: "by_borrower" | "by_lender") =>
+/**
+ * One person's loans, newest first. The group is a filter over their own
+ * index range: a person's history is small, so the scan stays cheap.
+ */
+const listBy = (
+  index: "by_borrower" | "by_lender",
+  {
+    group,
+    paginationOpts,
+  }: {
+    readonly group?: LoanGroup;
+    readonly paginationOpts: typeof PaginationOptions.PaginationOptions.Type;
+  },
+) =>
   Effect.gen(function* () {
     const { user } = yield* CurrentUser;
     const reader = yield* DatabaseReader;
-    const docs = yield* reader
+    const statuses = group === undefined ? undefined : loanGroupStatuses[group];
+    const result = yield* reader
       .table("loans")
       .index(
         index,
@@ -109,16 +126,21 @@ const listBy = (index: "by_borrower" | "by_lender") =>
             : q.eq("lenderId", user._id),
         "desc",
       )
-      .collect();
+      .paginate(
+        paginationOpts,
+        statuses === undefined
+          ? undefined
+          : (q) => q.or(...statuses.map((status) => q.eq(q.field("status"), status))),
+      );
     const perspective = index === "by_borrower" ? "borrower" : "lender";
-    return yield* Effect.forEach(docs, (loan) => toLoanView(loan, perspective));
+    return yield* mapPage(result, (loan) => toLoanView(loan, perspective));
   }).pipe(Effect.orDie);
 
-const myRequests = FunctionImpl.make(databaseSchema, loans, "myRequests", () =>
-  listBy("by_borrower"),
+const myRequests = FunctionImpl.make(databaseSchema, loans, "myRequests", (args) =>
+  listBy("by_borrower", args),
 );
-const incoming = FunctionImpl.make(databaseSchema, loans, "incoming", () =>
-  listBy("by_lender"),
+const incoming = FunctionImpl.make(databaseSchema, loans, "incoming", (args) =>
+  listBy("by_lender", args),
 );
 
 export default GroupImpl.make(databaseSchema, loans).pipe(

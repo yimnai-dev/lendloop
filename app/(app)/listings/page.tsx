@@ -4,19 +4,20 @@ import { PageHeader } from "~/components/app/PageHeader";
 import { MyListings } from "~/components/listings/MyListings";
 import { Button } from "~/components/ui/button";
 
-export const metadata = { title: "My listings" };
+export const metadata = { title: "Your shelf" };
 
 export default function ListingsPage() {
   return (
-    <section className="grid gap-8">
+    <section className="grid grid-cols-1 gap-12">
       <PageHeader
-        title="My listings"
-        description="What you're sharing with the neighborhood."
+        eyebrow="What you lend"
+        title="Your shelf"
+        description="Everything you're sharing with the neighborhood."
         actions={
-          <Button asChild>
+          <Button asChild variant="outline">
             <Link href="/listings/new">
               <PlusIcon aria-hidden />
-              New listing
+              List a tool
             </Link>
           </Button>
         }

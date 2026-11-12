@@ -14,8 +14,8 @@ async function Edit({ params }: Pick<PageProps<"/listings/[toolId]/edit">, "para
 
 export default function EditListingPage(props: PageProps<"/listings/[toolId]/edit">) {
   return (
-    <section className="mx-auto grid w-full max-w-2xl gap-8">
-      <PageHeader title="Edit listing" />
+    <section className="mx-auto grid w-full max-w-2xl gap-10">
+      <PageHeader eyebrow="Your shelf" title="Edit listing" />
       <Suspense>
         <Edit params={props.params} />
       </Suspense>

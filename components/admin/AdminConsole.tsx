@@ -1,7 +1,7 @@
 "use client";
 
 import { useQueryStates } from "nuqs";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs";
+import { TextTabs } from "~/components/app/TextTabs";
 import { ADMIN_TABS, adminParams } from "~/lib/searchParams";
 import { AdminAutomation } from "./AdminAutomation";
 import { AdminListings } from "./AdminListings";
@@ -9,41 +9,32 @@ import { AdminLoans } from "./AdminLoans";
 import { AdminUsers } from "./AdminUsers";
 
 const LABEL = {
-  loans: "All loans",
+  loans: "Loans",
   users: "Neighbors",
   listings: "Listings",
   automation: "Automation",
 } as const;
 
-/** Only the active tab mounts, so only its query subscribes. */
+const PANES = {
+  loans: AdminLoans,
+  users: AdminUsers,
+  listings: AdminListings,
+  automation: AdminAutomation,
+} as const;
+
+/** Only the active pane mounts, so only its query subscribes. */
 export function AdminConsole() {
   const [{ tab }, setParams] = useQueryStates(adminParams);
+  const Pane = PANES[tab];
   return (
-    <Tabs
-      value={tab}
-      onValueChange={(value) => {
-        void setParams({ tab: ADMIN_TABS.find((t) => t === value) ?? null });
-      }}
-    >
-      <TabsList className="max-w-full overflow-x-auto">
-        {ADMIN_TABS.map((t) => (
-          <TabsTrigger key={t} value={t}>
-            {LABEL[t]}
-          </TabsTrigger>
-        ))}
-      </TabsList>
-      <TabsContent value="loans" className="pt-4">
-        <AdminLoans />
-      </TabsContent>
-      <TabsContent value="users" className="pt-4">
-        <AdminUsers />
-      </TabsContent>
-      <TabsContent value="listings" className="pt-4">
-        <AdminListings />
-      </TabsContent>
-      <TabsContent value="automation" className="pt-4">
-        <AdminAutomation />
-      </TabsContent>
-    </Tabs>
+    <div className="grid grid-cols-1 gap-10">
+      <TextTabs
+        label="Admin"
+        value={tab}
+        options={ADMIN_TABS.map((t) => ({ value: t, label: LABEL[t] }))}
+        onChange={(t) => void setParams({ tab: t, status: null })}
+      />
+      <Pane />
+    </div>
   );
 }

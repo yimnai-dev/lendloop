@@ -24,7 +24,7 @@ test.describe.configure({ mode: "serial", timeout: 120_000 });
 test.beforeAll(async ({ browser }) => {
   const ada = await pageFor(browser, "ada");
   await ada.goto("/listings");
-  await expect(ada.getByRole("heading", { name: "My listings" })).toBeVisible();
+  await expect(ada.getByRole("heading", { name: "Your shelf" })).toBeVisible();
   const stale = ada.getByRole("listitem").filter({ hasText: "E2E ladder" });
   await ada.waitForTimeout(2_000);
   // Each removal re-renders the list, so always take the first remaining one.
@@ -55,7 +55,8 @@ test("list → request → approve → return, with emails", async ({ browser })
 
   const ben = await pageFor(browser, "ben");
   await ben.goto(toolUrl);
-  await ben.getByRole("button", { name: "Request to borrow" }).click();
+  // The calendar preselects the first free days; the button names them ("Request Nov 12 – 14 · 3 days").
+  await ben.getByRole("button", { name: /^Request / }).click();
   await expect(ben.getByText("Request sent to the owner")).toBeVisible();
   await ben.goto("/requests");
   await expect(loanCard(ben, toolName).getByText("Pending")).toBeVisible();
@@ -64,15 +65,20 @@ test("list → request → approve → return, with emails", async ({ browser })
 
   await page.goto("/incoming");
   await loanCard(page, toolName).getByRole("button", { name: "Approve" }).click();
+  // Approved loans move from "To decide" to "Out on loan".
+  await page.getByRole("tab", { name: "Out on loan" }).click();
   await expect(loanCard(page, toolName).getByText(USERS.ben.email)).toBeVisible();
 
   await expectEmail(USERS.ada.email, `New request for your ${toolName}`);
   await expectEmail(USERS.ben.email, `Approved: ${toolName}`);
-  // Live query: Ben's card flips without a reload and now shows Ada's email.
+  // Live query: the loan leaves Ben's "Waiting" tab without a reload.
+  await expect(loanCard(ben, toolName)).toHaveCount(0);
+  await ben.getByRole("tab", { name: "Out with you" }).click();
   await expect(loanCard(ben, toolName).getByText(USERS.ada.email)).toBeVisible();
 
   await loanCard(page, toolName).getByRole("button", { name: "Mark returned" }).click();
-  await expect(loanCard(page, toolName).getByText("Returned")).toBeVisible();
+  await page.getByRole("tab", { name: "History" }).click();
+  await expect(loanCard(page, toolName).getByText("Returned").first()).toBeVisible();
   await expectEmail(USERS.ben.email, `Returned: ${toolName}`);
 
   // Leave the shared deployment as we found it.

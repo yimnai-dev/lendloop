@@ -6,19 +6,15 @@ import * as Result from "effect/Result";
 import * as Schema from "effect/Schema";
 import { FieldError } from "~/components/form/FieldError";
 import { Button } from "~/components/ui/button";
-import { Input } from "~/components/ui/input";
-import { Label } from "~/components/ui/label";
 import type { Id } from "~/confect/_generated/id";
 import refs from "~/confect/_generated/refs";
+import { dayCount, formatRange } from "~/lib/dates";
 import { toastResult } from "~/lib/mutationResult";
 import { today } from "~/lib/today";
-import { DateRange } from "~/shared/domain/DateRange";
-import { addDays } from "~/shared/domain/IsoDate";
-import {
-  checkRequestWindow,
-  MAX_ADVANCE_DAYS,
-  MAX_LOAN_DAYS,
-} from "~/shared/domain/loanRequest";
+import { DateRange, overlaps } from "~/shared/domain/DateRange";
+import { addDays, compare, type IsoDate } from "~/shared/domain/IsoDate";
+import { checkRequestWindow, MAX_LOAN_DAYS } from "~/shared/domain/loanRequest";
+import { RangePicker } from "./RangePicker";
 
 const decodeRange = Schema.decodeUnknownOption(DateRange);
 
@@ -32,14 +28,49 @@ const windowError = (value: unknown) => {
   });
 };
 
-export function RequestForm({ toolId }: { readonly toolId: Id<"tools"> }) {
+/** First free day from today, so the default selection never sits on a booking. */
+const firstFreeDay = (from: IsoDate, booked: ReadonlyArray<DateRange>): IsoDate => {
+  const clash = booked.find((b) => overlaps(b, { startDate: from, endDate: from }));
+  return clash === undefined ? from : firstFreeDay(addDays(clash.endDate, 1), booked);
+};
+
+/** The longest run (up to 3 days) starting at `start` that avoids bookings. */
+const defaultRange = (start: IsoDate, booked: ReadonlyArray<DateRange>): DateRange => {
+  const next = booked
+    .map((b) => b.startDate)
+    .filter((d) => compare(d, start) > 0)
+    .toSorted(compare)[0];
+  const end = addDays(start, 2);
+  return {
+    startDate: start,
+    endDate: next !== undefined && compare(next, end) <= 0 ? addDays(next, -1) : end,
+  };
+};
+
+const ctaLabel = (values: typeof DateRange.Encoded) => {
+  const range = decodeRange(values);
+  if (range._tag === "None") return "Request to borrow";
+  const { startDate, endDate } = range.value;
+  const days = dayCount(startDate, endDate);
+  return `Request ${formatRange(startDate, endDate)} · ${days} ${days === 1 ? "day" : "days"}`;
+};
+
+export function RequestForm({
+  toolId,
+  lender,
+  booked,
+}: {
+  readonly toolId: Id<"tools">;
+  readonly lender: string;
+  readonly booked: ReadonlyArray<DateRange>;
+}) {
   const request = useMutation(refs.public.loans.request);
   const start = today();
   // Form state is raw input: the schema's encoded side, decoded on submit.
-  const defaultValues: typeof DateRange.Encoded = {
-    startDate: start,
-    endDate: addDays(start, 2),
-  };
+  const defaultValues: typeof DateRange.Encoded = defaultRange(
+    firstFreeDay(start, booked),
+    booked,
+  );
   const form = useForm({
     defaultValues,
     validators: {
@@ -54,46 +85,37 @@ export function RequestForm({ toolId }: { readonly toolId: Id<"tools"> }) {
 
   return (
     <form
-      className="grid gap-4"
+      className="grid gap-5"
       onSubmit={(event) => {
         event.preventDefault();
         void form.handleSubmit();
       }}
     >
-      <div className="grid gap-4 sm:grid-cols-2">
-        {(["startDate", "endDate"] as const).map((name) => (
-          <form.Field key={name} name={name}>
-            {(field) => (
-              <div className="grid gap-1.5">
-                <Label htmlFor={name}>{name === "startDate" ? "From" : "Until"}</Label>
-                <Input
-                  id={name}
-                  type="date"
-                  min={start}
-                  max={addDays(start, MAX_ADVANCE_DAYS + MAX_LOAN_DAYS)}
-                  value={field.state.value}
-                  onChange={(event) => field.handleChange(event.target.value)}
-                  onBlur={field.handleBlur}
-                />
-                <FieldError errors={field.state.meta.errors} />
-              </div>
-            )}
-          </form.Field>
-        ))}
-      </div>
       <form.Subscribe
-        selector={(state) => [state.errorMap.onSubmit, state.isSubmitting] as const}
+        selector={(state) =>
+          [state.values, state.errorMap.onSubmit, state.isSubmitting] as const
+        }
       >
-        {([submitError, isSubmitting]) => (
+        {([values, submitError, isSubmitting]) => (
           <>
+            <RangePicker
+              value={values}
+              today={start}
+              booked={booked}
+              onChange={(range) => {
+                form.setFieldValue("startDate", range.startDate);
+                form.setFieldValue("endDate", range.endDate);
+              }}
+            />
             <FieldError errors={[submitError]} />
-            <p className="text-muted-foreground text-xs">
-              Up to {MAX_LOAN_DAYS} days, starting within the next {MAX_ADVANCE_DAYS}{" "}
-              days.
-            </p>
-            <Button type="submit" size="lg" disabled={isSubmitting} className="w-full">
-              {isSubmitting ? "Sending…" : "Request to borrow"}
-            </Button>
+            <div className="grid gap-2.5">
+              <Button type="submit" size="lg" disabled={isSubmitting} className="w-full">
+                {isSubmitting ? "Sending…" : ctaLabel(values)}
+              </Button>
+              <p className="text-muted-foreground text-center text-xs">
+                {lender} gets an email and decides. Up to {MAX_LOAN_DAYS} days per loan.
+              </p>
+            </div>
           </>
         )}
       </form.Subscribe>

@@ -6,6 +6,7 @@ import { DatabaseReader, DatabaseWriter, StorageWriter } from "./_generated/serv
 import { NotFound } from "../shared/domain/errors";
 import { consumeRateLimit } from "./lib/rateLimit";
 import { deleteQuietly, validatePhotos } from "./lib/photos";
+import { mapPage } from "./lib/pages";
 import { toToolCard } from "./lib/views";
 import { archiveTool } from "./loans/archiveTool";
 import { loansForTool } from "./loans/queries";
@@ -14,34 +15,34 @@ import RequireUserImpl from "./middleware/RequireUser.impl";
 import { requireOwnTool, requireVisibleTool } from "./policies/access";
 import tools from "./tools.spec";
 
-const BROWSE_LIMIT = 200;
-
+/** Newest first. Every filter is an index range, so each page comes back full. */
 const browse = FunctionImpl.make(
   databaseSchema,
   tools,
   "browse",
-  ({ category, trustedOnly }) =>
+  ({ category, trustedOnly, paginationOpts }) =>
     Effect.gen(function* () {
       const { user } = yield* CurrentUser;
-      const reader = yield* DatabaseReader;
-      const docs = yield* reader
-        .table("tools")
-        .index("by_archived_category", (q) =>
-          category === undefined
-            ? q.eq("archived", false)
-            : q.eq("archived", false).eq("category", category),
-        )
-        .take(BROWSE_LIMIT);
-
-      const cards = yield* Effect.forEach(docs, (tool) => toToolCard(tool, user._id));
-      // Trusted lenders first, then alphabetical.
-      return cards
-        .filter((card) => !trustedOnly || card.owner.trustedLender)
-        .toSorted(
-          (a, b) =>
-            Number(b.owner.trustedLender) - Number(a.owner.trustedLender) ||
-            a.name.localeCompare(b.name),
-        );
+      const table = (yield* DatabaseReader).table("tools");
+      const query = trustedOnly
+        ? table.index(
+            "by_archived_trusted_category",
+            (q) => {
+              const trusted = q.eq("archived", false).eq("ownerTrusted", true);
+              return category === undefined ? trusted : trusted.eq("category", category);
+            },
+            "desc",
+          )
+        : table.index(
+            "by_archived_category",
+            (q) =>
+              category === undefined
+                ? q.eq("archived", false)
+                : q.eq("archived", false).eq("category", category),
+            "desc",
+          );
+      const result = yield* query.paginate(paginationOpts);
+      return yield* mapPage(result, (tool) => toToolCard(tool, user._id));
     }).pipe(Effect.orDie),
 );
 
@@ -97,7 +98,12 @@ const create = FunctionImpl.make(databaseSchema, tools, "create", (fields) =>
     const writer = yield* DatabaseWriter;
     return yield* writer
       .table("tools")
-      .insert({ ...fields, ownerId: user._id, archived: false })
+      .insert({
+        ...fields,
+        ownerId: user._id,
+        archived: false,
+        ownerTrusted: user.trustedLender,
+      })
       .pipe(Effect.orDie);
   }),
 );

@@ -1,14 +1,14 @@
-import { Badge } from "~/components/ui/badge";
+import { StatusDot, type Tone } from "~/components/app/StatusDot";
 import { loanStatusLabel, type LoanStatus } from "~/shared/domain/LoanStatus";
 
-const VARIANT = {
-  pending: "warning",
-  approved: "success",
-  declined: "outline",
-  cancelled: "outline",
+const TONE = {
+  pending: "wait",
+  approved: "ok",
+  declined: "quiet",
+  cancelled: "quiet",
   returned: "info",
-} as const satisfies Record<LoanStatus, string>;
+} as const satisfies Record<LoanStatus, Tone>;
 
 export function LoanStatusBadge({ status }: { readonly status: LoanStatus }) {
-  return <Badge variant={VARIANT[status]}>{loanStatusLabel[status]}</Badge>;
+  return <StatusDot tone={TONE[status]}>{loanStatusLabel[status]}</StatusDot>;
 }

@@ -6,33 +6,29 @@ import { Switch } from "~/components/ui/switch";
 import { browseParams } from "~/lib/searchParams";
 import { cn } from "~/lib/utils";
 import { CATEGORIES, type Category, categoryLabel } from "~/shared/domain/Category";
-import { categoryStyle } from "./categoryStyle";
 
-const chip =
-  "flex shrink-0 items-center gap-1.5 rounded-full border px-3 py-1.5 text-sm font-medium transition-colors";
-const chipIdle =
-  "bg-card text-muted-foreground hover:text-foreground hover:border-foreground/20";
-const chipActive = "bg-foreground text-background border-foreground";
-
-function Chip({
+function Tab({
   active,
   onClick,
-  category,
+  children,
 }: {
   readonly active: boolean;
   readonly onClick: () => void;
-  readonly category: Category | null;
+  readonly children: string;
 }) {
-  const Icon = category === null ? null : categoryStyle[category].Icon;
   return (
     <button
       type="button"
       aria-pressed={active}
       onClick={onClick}
-      className={cn(chip, active ? chipActive : chipIdle)}
+      className={cn(
+        "shrink-0 border-b py-1 text-[13px] transition-colors",
+        active
+          ? "border-foreground text-foreground font-medium"
+          : "text-muted-foreground hover:text-foreground border-transparent",
+      )}
     >
-      {Icon !== null && <Icon className="size-3.5" aria-hidden />}
-      {category === null ? "All" : categoryLabel[category]}
+      {children}
     </button>
   );
 }
@@ -43,17 +39,21 @@ export function BrowseFilters() {
     void setParams({ category: next });
   };
   return (
-    <div className="grid grid-cols-1 items-center gap-3 lg:grid-cols-[minmax(0,1fr)_auto]">
-      <fieldset className="min-w-0 max-w-full">
+    <div className="grid grid-cols-1 items-center gap-4 border-y py-4 lg:grid-cols-[minmax(0,1fr)_auto]">
+      <fieldset className="max-w-full min-w-0">
         <legend className="sr-only">Category</legend>
-        <div className="-mx-1 flex gap-1.5 overflow-x-auto px-1 pb-1">
-          <Chip active={category === null} onClick={pick(null)} category={null} />
+        <div className="-mx-1 flex gap-6 overflow-x-auto px-1">
+          <Tab active={category === null} onClick={pick(null)}>
+            All
+          </Tab>
           {CATEGORIES.map((c) => (
-            <Chip key={c} active={category === c} onClick={pick(c)} category={c} />
+            <Tab key={c} active={category === c} onClick={pick(c)}>
+              {categoryLabel[c]}
+            </Tab>
           ))}
         </div>
       </fieldset>
-      <Label className="text-muted-foreground flex items-center gap-2 text-sm font-medium">
+      <Label className="text-muted-foreground flex items-center gap-2.5 text-[13px] font-normal">
         <Switch
           checked={trusted}
           onCheckedChange={(checked) => {

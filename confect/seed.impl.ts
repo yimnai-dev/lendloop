@@ -9,6 +9,7 @@ import * as Schema from "effect/Schema";
 import type { Id } from "./_generated/id";
 import databaseSchema from "./_generated/schema";
 import { DatabaseReader, DatabaseWriter } from "./_generated/services";
+import { syncOwnerTrust } from "./lib/ownerTrust";
 import { appToday } from "./lib/today";
 import seed from "./seed.spec";
 import { SEED_LOANS, SEED_TOOLS, SEED_USERS, type SeedUserKey } from "./seed/data";
@@ -51,9 +52,13 @@ const demo = FunctionImpl.make(databaseSchema, seed, "demo", () =>
     const tools = new Map<string, { id: Id<"tools">; ownerId: Id<"users"> }>();
     for (const { key, owner, ...fields } of SEED_TOOLS) {
       const ownerId = userId(owner);
-      const id = yield* writer
-        .table("tools")
-        .insert({ ...fields, ownerId, photoIds: [], archived: false });
+      const id = yield* writer.table("tools").insert({
+        ...fields,
+        ownerId,
+        photoIds: [],
+        archived: false,
+        ownerTrusted: SEED_USERS.some((u) => u.key === owner && u.trustedLender),
+      });
       tools.set(key, { id, ownerId });
     }
 
@@ -80,7 +85,29 @@ const demo = FunctionImpl.make(databaseSchema, seed, "demo", () =>
   }).pipe(Effect.orDie),
 );
 
+const backfillOwnerTrust = FunctionImpl.make(
+  databaseSchema,
+  seed,
+  "backfillOwnerTrust",
+  () =>
+    Effect.gen(function* () {
+      const users = yield* (yield* DatabaseReader)
+        .table("users")
+        .index("by_creation_time")
+        .collect();
+      yield* Effect.forEach(
+        users,
+        (user) => syncOwnerTrust(user._id, user.trustedLender),
+        {
+          discard: true,
+        },
+      );
+      return { owners: users.length };
+    }).pipe(Effect.orDie),
+);
+
 export default GroupImpl.make(databaseSchema, seed).pipe(
   Layer.provide(demo),
+  Layer.provide(backfillOwnerTrust),
   GroupImpl.finalize,
 );

@@ -6,6 +6,12 @@
 
 @theme inline {
   --color-background: var(--background);
+  --color-moss: var(--moss);
+  --color-moss-soft: var(--moss-soft);
+  --color-ochre: var(--ochre);
+  --color-ochre-soft: var(--ochre-soft);
+  --color-rust: var(--rust);
+  --color-rust-soft: var(--rust-soft);
   --color-foreground: var(--foreground);
   --font-sans: var(--font-sans);
   --font-mono: var(--font-geist-mono);
@@ -49,39 +55,45 @@
 }
 
 :root {
-  /* Warm paper neutrals, forest-green primary, amber accent. */
-  --background: oklch(0.985 0.006 85);
-  --foreground: oklch(0.22 0.02 60);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.22 0.02 60);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.22 0.02 60);
-  --primary: oklch(0.46 0.1 158);
-  --primary-foreground: oklch(0.985 0.01 150);
-  --secondary: oklch(0.95 0.014 85);
-  --secondary-foreground: oklch(0.3 0.03 60);
-  --muted: oklch(0.955 0.01 85);
-  --muted-foreground: oklch(0.5 0.02 60);
-  --accent: oklch(0.94 0.045 85);
-  --accent-foreground: oklch(0.36 0.07 60);
-  --destructive: oklch(0.56 0.2 27);
-  --border: oklch(0.905 0.013 80);
-  --input: oklch(0.88 0.015 80);
-  --ring: oklch(0.46 0.1 158);
-  --chart-1: oklch(0.46 0.1 158);
-  --chart-2: oklch(0.78 0.14 75);
-  --chart-3: oklch(0.6 0.12 40);
-  --chart-4: oklch(0.55 0.08 230);
-  --chart-5: oklch(0.4 0.05 60);
-  --radius: 0.75rem;
-  --sidebar: oklch(0.975 0.008 85);
-  --sidebar-foreground: oklch(0.22 0.02 60);
-  --sidebar-primary: oklch(0.46 0.1 158);
-  --sidebar-primary-foreground: oklch(0.985 0.01 150);
-  --sidebar-accent: oklch(0.94 0.045 85);
-  --sidebar-accent-foreground: oklch(0.36 0.07 60);
-  --sidebar-border: oklch(0.905 0.013 80);
-  --sidebar-ring: oklch(0.46 0.1 158);
+  /* Editorial: warm paper, ink, hairline rules. Color is reserved for status. */
+  --background: #f7f4ef;
+  --foreground: #1b1916;
+  --card: #fbf9f5;
+  --card-foreground: #1b1916;
+  --popover: #fdfcf9;
+  --popover-foreground: #1b1916;
+  --primary: #1b1916;
+  --primary-foreground: #f7f4ef;
+  --secondary: #efeae2;
+  --secondary-foreground: #1b1916;
+  --muted: #efeae2;
+  --muted-foreground: #7d766c;
+  --accent: #e9e3d8;
+  --accent-foreground: #1b1916;
+  --destructive: #a23e2a;
+  --border: #e2dcd2;
+  --input: #d9d2c6;
+  --ring: #1b1916;
+  --moss: #2e4a3b;
+  --moss-soft: #e4ebe4;
+  --ochre: #9a6b1f;
+  --ochre-soft: #f3e8d2;
+  --rust: #a23e2a;
+  --rust-soft: #f4e1dc;
+  --chart-1: #2e4a3b;
+  --chart-2: #9a6b1f;
+  --chart-3: #a23e2a;
+  --chart-4: #5e5850;
+  --chart-5: #8f887e;
+  --radius: 0.5rem;
+  --sidebar: #f7f4ef;
+  --sidebar-foreground: #1b1916;
+  --sidebar-primary: #1b1916;
+  --sidebar-primary-foreground: #f7f4ef;
+  --sidebar-accent: #efeae2;
+  --sidebar-accent-foreground: #1b1916;
+  --sidebar-border: #e2dcd2;
+  --sidebar-ring: #1b1916;
 }
 
 .dark {
@@ -129,8 +141,15 @@
     @apply font-sans;
   }
   h1,
-  h2,
-  h3 {
-    @apply font-heading tracking-tight;
+  h2 {
+    @apply font-heading font-normal tracking-[-0.01em];
   }
+  ::selection {
+    @apply bg-foreground text-background;
+  }
+}
+
+/* Small uppercase eyebrow used above titles and as table/section labels. */
+@utility eyebrow {
+  @apply text-muted-foreground text-[11px] font-medium tracking-[0.12em] uppercase;
 }

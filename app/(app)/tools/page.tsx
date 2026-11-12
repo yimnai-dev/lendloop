@@ -1,26 +1,22 @@
-import Link from "next/link";
-import { PlusIcon } from "lucide-react";
 import { Suspense } from "react";
 import { PageHeader } from "~/components/app/PageHeader";
 import { BrowseTools } from "~/components/tools/BrowseTools";
-import { Button } from "~/components/ui/button";
 
 export const metadata = { title: "Browse tools" };
 
 export default function ToolsPage() {
   return (
-    <section className="grid grid-cols-1 gap-8">
+    <section className="grid grid-cols-1 gap-12">
       <PageHeader
-        title="Tools in your neighborhood"
-        description="Borrow for up to 14 days. Owners approve each request."
-        actions={
-          <Button asChild>
-            <Link href="/listings/new">
-              <PlusIcon aria-hidden />
-              List a tool
-            </Link>
-          </Button>
+        eyebrow="The shed"
+        title={
+          <>
+            Borrow what you need,
+            <br />
+            <em className="text-muted-foreground">from people nearby.</em>
+          </>
         }
+        description="Ask an owner for up to fourteen days. Their email is shared only once they say yes."
       />
       {/* Filters read the URL, which is request-time data. */}
       <Suspense>

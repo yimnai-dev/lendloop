@@ -12,10 +12,10 @@ export default GroupSpec.make()
   .middleware(RequireUser)
   .middleware(RequireRole, { admin: true })
   .addFunction(
-    FunctionSpec.publicQuery({
+    FunctionSpec.publicPaginatedQuery({
       name: "loans",
       args: () => ({ status: Schema.optionalKey(LoanStatus) }),
-      returns: () => Schema.Array(AdminLoan),
+      item: () => AdminLoan,
     }),
   )
   .addFunction(

@@ -2,8 +2,8 @@
 
 import { useMutation, useQuery } from "@confect/react";
 import { QueryView } from "~/components/app/QueryView";
+import { StatusDot } from "~/components/app/StatusDot";
 import { AUTOMATION_LABELS } from "~/components/loans/timeline";
-import { Badge } from "~/components/ui/badge";
 import { Button } from "~/components/ui/button";
 import {
   Table,
@@ -29,19 +29,12 @@ function Stat({
   readonly bad?: boolean;
 }) {
   return (
-    <div
-      className={cn(
-        "bg-card grid gap-1 rounded-2xl border p-4",
-        bad && "border-destructive/40 bg-destructive/5",
-      )}
-    >
-      <span className="text-muted-foreground text-xs font-medium tracking-wider uppercase">
-        {label}
-      </span>
+    <div className="grid gap-3 border-t pt-4">
+      <span className="eyebrow">{label}</span>
       <span
         className={cn(
-          "font-heading text-3xl font-semibold tabular-nums",
-          bad && "text-destructive",
+          "font-heading text-6xl leading-none tabular-nums",
+          bad && "text-rust",
         )}
       >
         {value}
@@ -49,6 +42,7 @@ function Stat({
     </div>
   );
 }
+
 const FAILED = new Set(["notification_dead", "reminder_failed", "workflow_error"]);
 
 export function AdminAutomation() {
@@ -57,10 +51,10 @@ export function AdminAutomation() {
   return (
     <QueryView result={health}>
       {({ outbox, recent }) => (
-        <div className="grid gap-4">
+        <div className="grid grid-cols-1 gap-8">
           <div className="flex flex-wrap items-end justify-between gap-3">
             <div className="grid gap-1">
-              <h2 className="text-lg font-semibold">Notification outbox</h2>
+              <h2 className="text-3xl">Notification outbox</h2>
               <p className="text-muted-foreground text-sm">
                 Convex → n8n deliveries, retried with backoff.
               </p>
@@ -76,12 +70,12 @@ export function AdminAutomation() {
               </Button>
             )}
           </div>
-          <div className="grid gap-3 sm:grid-cols-3">
+          <div className="grid gap-8 sm:grid-cols-3">
             <Stat label="Pending" value={outbox.pending} />
             <Stat label="Delivered" value={outbox.delivered} />
             <Stat label="Failed" value={outbox.dead} bad={outbox.dead > 0} />
           </div>
-          <h2 className="mt-4 text-lg font-semibold">Recent activity</h2>
+          <h2 className="mt-8 text-3xl">Recent activity</h2>
           {recent.length === 0 ? (
             <p className="text-muted-foreground">No automation activity yet.</p>
           ) : (
@@ -98,15 +92,13 @@ export function AdminAutomation() {
                 <TableBody>
                   {recent.map((event) => (
                     <TableRow key={event._id}>
-                      <TableCell className="whitespace-nowrap">
+                      <TableCell className="font-mono text-xs whitespace-nowrap">
                         {formatTimestamp(event.at)}
                       </TableCell>
                       <TableCell>
-                        <Badge
-                          variant={FAILED.has(event.kind) ? "destructive" : "success"}
-                        >
+                        <StatusDot tone={FAILED.has(event.kind) ? "late" : "ok"}>
                           {AUTOMATION_LABELS[event.kind]}
-                        </Badge>
+                        </StatusDot>
                       </TableCell>
                       <TableCell>{event.toolName ?? "—"}</TableCell>
                       <TableCell className="text-muted-foreground max-w-md truncate text-sm">

@@ -18,3 +18,14 @@ export const loanStatusLabel = {
   cancelled: "Cancelled",
   returned: "Returned",
 } as const satisfies Record<LoanStatus, string>;
+
+/** The three ways people look at their loans: what needs a decision, what's out, and the past. */
+export const LOAN_GROUPS = ["waiting", "active", "past"] as const;
+export const LoanGroup = Schema.Literals(LOAN_GROUPS);
+export type LoanGroup = typeof LoanGroup.Type;
+
+export const loanGroupStatuses = {
+  waiting: ["pending"],
+  active: ["approved"],
+  past: ["returned", "declined", "cancelled"],
+} as const satisfies Record<LoanGroup, ReadonlyArray<LoanStatus>>;

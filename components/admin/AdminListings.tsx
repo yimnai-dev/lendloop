@@ -3,7 +3,7 @@
 import { useMutation, useQuery } from "@confect/react";
 import Link from "next/link";
 import { QueryView } from "~/components/app/QueryView";
-import { Badge } from "~/components/ui/badge";
+import { StatusDot } from "~/components/app/StatusDot";
 import { Button } from "~/components/ui/button";
 import {
   Table,
@@ -44,7 +44,7 @@ export function AdminListings() {
                     <TableCell>
                       <Link
                         href={`/tools/${tool._id}`}
-                        className="flex items-center gap-3 font-medium hover:underline"
+                        className="font-heading flex items-center gap-3 text-lg hover:underline"
                       >
                         <CategoryIcon category={tool.category} size="sm" />
                         {tool.name}
@@ -54,7 +54,7 @@ export function AdminListings() {
                     <TableCell>{tool.owner.firstName}</TableCell>
                     <TableCell className="text-right">
                       {tool.onLoan ? (
-                        <Badge variant="warning">On loan</Badge>
+                        <StatusDot tone="wait">On loan</StatusDot>
                       ) : (
                         <Button
                           variant="ghost"

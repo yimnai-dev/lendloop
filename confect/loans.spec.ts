@@ -9,6 +9,7 @@ import {
   NotFound,
   RateLimited,
 } from "../shared/domain/errors";
+import { LoanGroup } from "../shared/domain/LoanStatus";
 import { Id } from "./_generated/id";
 import RequireUser from "./middleware/RequireUser.spec";
 import { LoanView } from "./views";
@@ -49,11 +50,16 @@ export default GroupSpec.make()
   .addFunction(transitionMutation("cancel"))
   .addFunction(transitionMutation("markReturned"))
   .addFunction(
-    FunctionSpec.publicQuery({
+    FunctionSpec.publicPaginatedQuery({
       name: "myRequests",
-      returns: () => Schema.Array(LoanView),
+      args: () => ({ group: Schema.optionalKey(LoanGroup) }),
+      item: () => LoanView,
     }),
   )
   .addFunction(
-    FunctionSpec.publicQuery({ name: "incoming", returns: () => Schema.Array(LoanView) }),
+    FunctionSpec.publicPaginatedQuery({
+      name: "incoming",
+      args: () => ({ group: Schema.optionalKey(LoanGroup) }),
+      item: () => LoanView,
+    }),
   );

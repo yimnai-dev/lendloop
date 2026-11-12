@@ -1,16 +1,21 @@
+import { Suspense } from "react";
 import { PageHeader } from "~/components/app/PageHeader";
 import { LoanList } from "~/components/loans/LoanList";
 
-export const metadata = { title: "Incoming requests" };
+export const metadata = { title: "Lending" };
 
 export default function IncomingPage() {
   return (
-    <section className="grid gap-8">
+    <section className="grid grid-cols-1 gap-12">
       <PageHeader
-        title="Incoming requests"
-        description="Neighbors asking to borrow your tools. Approving declines any overlapping requests."
+        eyebrow="Requests for your tools"
+        title="Lending"
+        description="Approving a request declines any that overlap it, and both neighbors are emailed."
       />
-      <LoanList as="lender" />
+      {/* The tab lives in the URL, which is request-time data. */}
+      <Suspense>
+        <LoanList as="lender" />
+      </Suspense>
     </section>
   );
 }

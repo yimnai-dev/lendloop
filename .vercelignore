@@ -1,0 +1,11 @@
+# The Vercel CLI does not read .gitignore; keep secrets and local state out of uploads.
+.env*
+!.env.example
+.convex/
+.clerk/
+.next/
+node_modules/
+n8n_data/
+screens/
+test-results/
+playwright-report/

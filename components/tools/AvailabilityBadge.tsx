@@ -1,8 +1,8 @@
 "use client";
 
-import { Badge } from "~/components/ui/badge";
+import { StatusDot } from "~/components/app/StatusDot";
 import type { Booking } from "~/confect/views";
-import { formatDate } from "~/lib/dates";
+import { formatWeekday } from "~/lib/dates";
 import { today } from "~/lib/today";
 import { availability } from "~/shared/domain/loanView";
 
@@ -18,10 +18,10 @@ export function AvailabilityBadge({
   );
   switch (state._tag) {
     case "Available":
-      return <Badge variant="success">Available</Badge>;
+      return <StatusDot tone="ok">Available</StatusDot>;
     case "OnLoan":
-      return <Badge variant="warning">Back {formatDate(state.until)}</Badge>;
+      return <StatusDot tone="wait">Back {formatWeekday(state.until)}</StatusDot>;
     case "Overdue":
-      return <Badge variant="destructive">Overdue</Badge>;
+      return <StatusDot tone="late">Overdue</StatusDot>;
   }
 }

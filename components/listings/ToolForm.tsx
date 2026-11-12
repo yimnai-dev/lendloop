@@ -50,7 +50,7 @@ export function ToolForm({ initial, submitLabel, onSubmit }: Props) {
 
   return (
     <form
-      className="bg-card grid gap-6 rounded-2xl border p-6 shadow-xs"
+      className="grid gap-7 border-t pt-8"
       onSubmit={(event) => {
         event.preventDefault();
         void form.handleSubmit();

@@ -19,7 +19,7 @@ export function HeroActions({ size = "lg" }: { readonly size?: "lg" | "sm" }) {
   }
   return (
     <SignInButton mode="modal" forceRedirectUrl="/tools">
-      <Button size={size}>
+      <Button size={size} variant={size === "lg" ? "default" : "outline"}>
         {size === "lg" ? "Sign in to borrow" : "Sign in"} <ArrowRightIcon />
       </Button>
     </SignInButton>

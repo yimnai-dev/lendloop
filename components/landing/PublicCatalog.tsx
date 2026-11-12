@@ -4,7 +4,6 @@ import { useQuery } from "@confect/react";
 import { PackageOpenIcon } from "lucide-react";
 import { EmptyState } from "~/components/app/EmptyState";
 import { QueryView } from "~/components/app/QueryView";
-import { CategoryIcon } from "~/components/tools/CategoryIcon";
 import { Skeleton } from "~/components/ui/skeleton";
 import refs from "~/confect/_generated/refs";
 import { categoryLabel } from "~/shared/domain/Category";
@@ -20,9 +19,9 @@ const groupTools = (tools: ReadonlyArray<PublicTool>) =>
   });
 
 const Loading = () => (
-  <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+  <div className="grid gap-x-10 border-t sm:grid-cols-2 lg:grid-cols-3">
     {["a", "b", "c", "d", "e", "f"].map((key) => (
-      <Skeleton key={key} className="h-[4.5rem] rounded-xl" />
+      <Skeleton key={key} className="my-3 h-8" />
     ))}
   </div>
 );
@@ -40,27 +39,28 @@ export function PublicCatalog() {
             description="No tools listed yet. Sign in and be the first neighbor to share one."
           />
         ) : (
-          <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            {groupTools(items).map(({ key, name, category, count }) => (
+          <ol className="grid gap-x-10 border-t sm:grid-cols-2 lg:grid-cols-3">
+            {groupTools(items).map(({ key, name, category, count }, index) => (
               <li
                 key={key}
-                className="bg-card flex items-center gap-3 rounded-xl border p-3"
+                className="grid grid-cols-[2rem_1fr_auto] items-baseline gap-3 border-b py-4"
               >
-                <CategoryIcon category={category} />
-                <div className="grid min-w-0">
-                  <span className="truncate font-medium">
-                    {name}
-                    {count > 1 && (
-                      <span className="text-muted-foreground font-normal"> ×{count}</span>
-                    )}
-                  </span>
-                  <span className="text-muted-foreground text-xs">
-                    {categoryLabel[category]}
-                  </span>
-                </div>
+                <span className="text-muted-foreground font-mono text-[11px]">
+                  {String(index + 1).padStart(2, "0")}
+                </span>
+                <span className="font-heading truncate text-xl">
+                  {name}
+                  {count > 1 && (
+                    <span className="text-muted-foreground font-sans text-sm">
+                      {" "}
+                      ×{count}
+                    </span>
+                  )}
+                </span>
+                <span className="eyebrow text-[10px]">{categoryLabel[category]}</span>
               </li>
             ))}
-          </ul>
+          </ol>
         )
       }
     </QueryView>

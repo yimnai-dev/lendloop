@@ -15,7 +15,14 @@ export default Table.make(() =>
     photoIds: Schema.Array(Id("_storage")).check(Schema.isMaxLength(MAX_TOOL_PHOTOS)),
     /** Soft delete: archived tools keep their loan history. */
     archived: Schema.Boolean,
+    /**
+     * Denormalized from the owner so "trusted lenders only" is an index range,
+     * which keeps paginated pages full. Kept in sync by `syncOwnerTrust`.
+     * Optional only so rows written before it existed stay valid.
+     */
+    ownerTrusted: Schema.optionalKey(Schema.Boolean),
   }),
 )
   .index("by_owner", ["ownerId", "archived"])
-  .index("by_archived_category", ["archived", "category"]);
+  .index("by_archived_category", ["archived", "category"])
+  .index("by_archived_trusted_category", ["archived", "ownerTrusted", "category"]);

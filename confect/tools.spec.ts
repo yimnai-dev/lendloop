@@ -19,13 +19,13 @@ const photoIds = Schema.Array(Id("_storage"));
 export default GroupSpec.make()
   .middleware(RequireUser)
   .addFunction(
-    FunctionSpec.publicQuery({
+    FunctionSpec.publicPaginatedQuery({
       name: "browse",
       args: () => ({
         category: Schema.optionalKey(Category),
         trustedOnly: Schema.Boolean,
       }),
-      returns: () => Schema.Array(ToolCard),
+      item: () => ToolCard,
     }),
   )
   .addFunction(

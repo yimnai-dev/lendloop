@@ -1,8 +1,7 @@
-import { Repeat2Icon } from "lucide-react";
 import Link from "next/link";
 import { cn } from "~/lib/utils";
 
-/** Wordmark: a loop (things come back) on the brand green. */
+/** Serif wordmark; the italic "Loop" carries the brand's single color. */
 export function Logo({
   href = "/",
   className,
@@ -14,14 +13,11 @@ export function Logo({
     <Link
       href={href}
       className={cn(
-        "flex items-center gap-2 font-heading text-lg font-semibold",
+        "font-heading text-[1.7rem] leading-none tracking-[-0.01em]",
         className,
       )}
     >
-      <span className="bg-primary text-primary-foreground grid size-8 place-items-center rounded-lg shadow-sm">
-        <Repeat2Icon className="size-5" aria-hidden />
-      </span>
-      LendLoop
+      Lend<em className="text-moss">Loop</em>
     </Link>
   );
 }

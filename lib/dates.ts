@@ -16,3 +16,16 @@ export const formatDate = (date: IsoDate) => short.format(toUtc(date));
 
 const stamp = new Intl.DateTimeFormat("en", { dateStyle: "medium", timeStyle: "short" });
 export const formatTimestamp = (epochMs: number) => stamp.format(epochMs);
+
+const weekday = new Intl.DateTimeFormat("en", {
+  weekday: "short",
+  month: "short",
+  day: "numeric",
+  timeZone: "UTC",
+});
+/** "Thu, Nov 14" */
+export const formatWeekday = (date: IsoDate) => weekday.format(toUtc(date));
+
+/** Inclusive day count of a loan. */
+export const dayCount = (start: IsoDate, end: IsoDate) =>
+  Math.round((toUtc(end).getTime() - toUtc(start).getTime()) / 86_400_000) + 1;

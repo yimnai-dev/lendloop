@@ -1,7 +1,12 @@
 import type { LoanView } from "~/confect/views";
 import type { AutomationKind } from "~/confect/tables/automationEvents";
 
-export type TimelineEntry = { readonly at: number; readonly label: string };
+export type TimelineEntry = {
+  readonly at: number;
+  readonly label: string;
+  /** Written by the n8n automations rather than a person. */
+  readonly automated: boolean;
+};
 
 export const AUTOMATION_LABELS: Record<typeof AutomationKind.Type, string> = {
   notification_delivered: "Email notification sent",
@@ -22,15 +27,18 @@ const DECISION_LABELS: Partial<Record<LoanView["status"], string>> = {
 export const timeline = (loan: LoanView): ReadonlyArray<TimelineEntry> => {
   const decision = DECISION_LABELS[loan.status];
   const lifecycle: ReadonlyArray<TimelineEntry> = [
-    { at: loan.requestedAt, label: "Requested" },
+    { at: loan.requestedAt, label: "Requested", automated: false },
     ...(loan.decidedAt !== null && decision !== undefined
-      ? [{ at: loan.decidedAt, label: decision }]
+      ? [{ at: loan.decidedAt, label: decision, automated: false }]
       : []),
-    ...(loan.returnedAt !== null ? [{ at: loan.returnedAt, label: "Returned" }] : []),
+    ...(loan.returnedAt !== null
+      ? [{ at: loan.returnedAt, label: "Returned", automated: false }]
+      : []),
   ];
   const automation = loan.activity.map(({ kind, at }) => ({
     at,
     label: AUTOMATION_LABELS[kind],
+    automated: true,
   }));
   return [...lifecycle, ...automation].toSorted((a, b) => b.at - a.at);
 };

@@ -36,6 +36,9 @@ const outcome = async <A, E extends { readonly _tag: string }>(
   return error === undefined ? "defect" : error.error._tag;
 };
 
+/** First page of a paginated query, big enough for every test here. */
+const firstPage = { paginationOpts: { numItems: 50, cursor: null } };
+
 const run = <A, E>(effect: Effect.Effect<A, E>) => Effect.runPromise(effect);
 
 let app: TestApp;
@@ -74,13 +77,15 @@ describe("authentication", () => {
       { name: "Cordless drill", category: "power_tools" },
     ]);
     expect(
-      await outcome(app.anonymous.query(api.tools.browse, { trustedOnly: false })),
+      await outcome(
+        app.anonymous.query(api.tools.browse, { ...firstPage, trustedOnly: false }),
+      ),
     ).toBe("NotSignedIn");
   });
 
   it("a signed-in Clerk user without a LendLoop record is not provisioned", async () => {
     const stranger = { subject: "user_new", email: "new@example.test", givenName: "New" };
-    expect(await outcome(app.as(stranger).query(api.loans.myRequests, {}))).toBe(
+    expect(await outcome(app.as(stranger).query(api.loans.myRequests, firstPage))).toBe(
       "AccountNotProvisioned",
     );
   });
@@ -146,11 +151,15 @@ describe("loan workflow", () => {
     const loanId = await run(
       app.as(ben).mutation(api.loans.request, { toolId, dates: dates(1, 3) }),
     );
-    const [pending] = await run(app.as(ada).query(api.loans.incoming, {}));
+    const {
+      page: [pending],
+    } = await run(app.as(ada).query(api.loans.incoming, firstPage));
     expect(pending?.counterpart.email).toBeNull();
 
     await run(app.as(ada).mutation(api.loans.approve, { loanId }));
-    const [approved] = await run(app.as(ada).query(api.loans.incoming, {}));
+    const {
+      page: [approved],
+    } = await run(app.as(ada).query(api.loans.incoming, firstPage));
     expect(approved?.counterpart.email).toBe(ben.email);
   });
 
@@ -162,13 +171,40 @@ describe("loan workflow", () => {
     await run(app.as(cleo).mutation(api.loans.request, { toolId, dates: dates(2, 4) }));
     await run(app.as(ada).mutation(api.loans.approve, { loanId: first }));
 
-    const [cleos] = await run(app.as(cleo).query(api.loans.myRequests, {}));
+    const {
+      page: [cleos],
+    } = await run(app.as(cleo).query(api.loans.myRequests, firstPage));
     expect(cleos?.status).toBe("declined");
     expect(
       await outcome(
         app.as(cleo).mutation(api.loans.request, { toolId, dates: dates(3, 5) }),
       ),
     ).toBe("DateConflict");
+  });
+
+  it("pages through loans and filters them by group", async () => {
+    const toolId = await listDrill(ada);
+    const first = await run(
+      app.as(ben).mutation(api.loans.request, { toolId, dates: dates(1, 2) }),
+    );
+    await run(app.as(cleo).mutation(api.loans.request, { toolId, dates: dates(4, 5) }));
+    await run(app.as(ada).mutation(api.loans.approve, { loanId: first }));
+
+    const onePage = await run(
+      app.as(ada).query(api.loans.incoming, {
+        paginationOpts: { numItems: 1, cursor: null },
+      }),
+    );
+    expect(onePage.page).toHaveLength(1);
+    expect(onePage.isDone).toBe(false);
+
+    const statusesIn = async (group: "waiting" | "active" | "past") =>
+      (
+        await run(app.as(ada).query(api.loans.incoming, { ...firstPage, group }))
+      ).page.map((loan) => loan.status);
+    expect(await statusesIn("waiting")).toEqual(["pending"]);
+    expect(await statusesIn("active")).toEqual(["approved"]);
+    expect(await statusesIn("past")).toEqual([]);
   });
 
   it("rejects past starts and over-long loans server-side", async () => {
@@ -197,7 +233,7 @@ describe("admin", () => {
     if (adaId === undefined) throw new Error("ada missing");
 
     const asBen = app.as(ben);
-    expect(await outcome(asBen.query(api.admin.loans, {}))).toBe("AdminOnly");
+    expect(await outcome(asBen.query(api.admin.loans, firstPage))).toBe("AdminOnly");
     expect(await outcome(asBen.query(api.admin.listings, {}))).toBe("AdminOnly");
     expect(await outcome(asBen.query(api.admin.automation, {}))).toBe("AdminOnly");
     expect(await outcome(asBen.mutation(api.admin.redriveNotifications, {}))).toBe(
@@ -217,9 +253,10 @@ describe("admin", () => {
     const toolId = await listDrill(ada);
     const asRoot = app.as(root);
     await run(asRoot.mutation(api.admin.removeListing, { toolId }));
-    expect(
-      await run(app.as(ben).query(api.tools.browse, { trustedOnly: false })),
-    ).toEqual([]);
+    const browse = await run(
+      app.as(ben).query(api.tools.browse, { ...firstPage, trustedOnly: false }),
+    );
+    expect(browse.page).toEqual([]);
 
     const adaRow = (await run(asRoot.query(api.admin.users, {}))).find(
       (u) => u.firstName === "Ada",
@@ -237,5 +274,24 @@ describe("admin", () => {
       action: "grant",
       actorFirstName: "Root",
     });
+  });
+
+  it("granting Trusted Lender puts the owner's tools under the trusted filter", async () => {
+    await listDrill(ada);
+    const trustedOnly = () =>
+      run(app.as(ben).query(api.tools.browse, { ...firstPage, trustedOnly: true }));
+    expect((await trustedOnly()).page).toEqual([]);
+
+    const asRoot = app.as(root);
+    const adaRow = (await run(asRoot.query(api.admin.users, {}))).find(
+      (u) => u.firstName === "Ada",
+    );
+    if (adaRow === undefined) throw new Error("ada missing");
+    await run(
+      asRoot.mutation(api.admin.setTrustedLender, { userId: adaRow._id, trusted: true }),
+    );
+    expect((await trustedOnly()).page.map((tool) => tool.name)).toEqual([
+      "Cordless drill",
+    ]);
   });
 });
